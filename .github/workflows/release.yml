@@ -44,8 +44,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  update-json:
-    name: Update JSON metadata
+  update-changelog:
+    name: Update CHANGELOG and JSON metadata
     needs: build
     runs-on: ubuntu-latest
 
@@ -60,51 +60,83 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update version in JSON with changelog
+      - name: Update CHANGELOG.md and JSON
+        shell: bash
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
+          TODAY=$(date +"%Y-%m-%d")
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
           JSON_PATH=".github/update-metadata/raffaello-product-sync.json"
 
-          # Leggi changelog dal file CHANGELOG.md (ultime 3 versioni)
-          if [ -f "CHANGELOG.md" ]; then
-            # Estrai il contenuto tra i primi 3 heading ## e converti in HTML basico
-            CHANGELOG=$(awk '/^## \[/{n++} n<=3' CHANGELOG.md | \
-              sed 's/^## \[\(.*\)\] - \(.*\)/<h4>\1 (\2)<\/h4><ul>/' | \
-              sed 's/^### \(.*\)/<\/ul><h5>\1<\/h5><ul>/' | \
-              sed 's/^- \(.*\)/<li>\1<\/li>/' | \
-              grep -v '^$' | grep -v '^#' | grep -v '^Tutte' | \
-              jq -Rs .)
+          # Trova il tag precedente
+          PREV_TAG=$(git tag --sort=-creatordate | grep -v "$VERSION" | head -n 1)
+          echo "Previous tag: $PREV_TAG"
+
+          # Genera le voci changelog dai commit
+          if [ -n "$PREV_TAG" ]; then
+            ENTRIES=$(git log "$PREV_TAG..HEAD" --pretty=format:"- %s" --no-merges | grep -v "^- Update JSON to version" | grep -v "^- Release ")
           else
-            CHANGELOG=$(echo "<li>Vedi CHANGELOG.md su GitHub</li>" | jq -Rs .)
+            ENTRIES="- Versione iniziale"
           fi
 
-          cat <<EOF > $JSON_PATH
-          {
-            "name": "Raffaello Product Sync",
-            "version": "$VERSION",
-            "download_url": "https://github.com/danieledignani/raffaello-product-sync/releases/download/$VERSION/raffaello-product-sync.zip",
-            "homepage": "https://github.com/danieledignani/raffaello-product-sync",
-            "requires": "5.8",
-            "tested": "6.8",
-            "requires_php": "7.4",
-            "last_updated": "$TIMESTAMP",
-            "upgrade_notice": "Aggiornamento automatico da GitHub",
-            "author": "Daniele Dignani",
-            "author_homepage": "https://github.com/danieledignani",
-            "sections": {
-              "description": "Sincronizzazione prodotti WooCommerce tra più store tramite REST API.",
-              "installation": "Carica il plugin tramite il pannello 'Plugin > Aggiungi nuovo' o scompatta nella cartella wp-content/plugins/",
-              "changelog": $CHANGELOG
-            }
-          }
-          EOF
+          # Crea la nuova sezione changelog
+          NEW_SECTION=$(cat <<'SECTION_END'
+          ## [__VERSION__] - __TODAY__
 
-      - name: Commit updated JSON
+          ### Modifiche
+          SECTION_END
+          )
+          NEW_SECTION=$(echo "$NEW_SECTION" | sed "s/__VERSION__/$VERSION/g" | sed "s/__TODAY__/$TODAY/g" | sed 's/^          //')
+          NEW_SECTION=$(printf "%s\n%s" "$NEW_SECTION" "$ENTRIES")
+
+          # Aggiorna CHANGELOG.md incrementalmente
+          if [ -f "CHANGELOG.md" ]; then
+            awk -v section="$NEW_SECTION" 'BEGIN{found=0} /^## \[/ && !found { print section; print ""; found=1 } { print }' CHANGELOG.md > CHANGELOG.tmp
+            mv CHANGELOG.tmp CHANGELOG.md
+          else
+            printf "# Changelog\n\nTutte le modifiche rilevanti al plugin sono documentate in questo file.\n\n%s\n" "$NEW_SECTION" > CHANGELOG.md
+          fi
+
+          # Genera HTML dal CHANGELOG.md per il JSON (ultime 3 versioni)
+          CHANGELOG_HTML=$(awk '/^## \[/{n++} n<=3' CHANGELOG.md | \
+            sed 's/^## \[\(.*\)\] - \(.*\)/<h4>\1 (\2)<\/h4><ul>/' | \
+            sed 's/^### \(.*\)/<\/ul><h5>\1<\/h5><ul>/' | \
+            sed 's/^- \(.*\)/<li>\1<\/li>/' | \
+            grep -v '^$' | grep -v '^#' | grep -v '^Tutte' | \
+            jq -Rs .)
+
+          # Scrivi il JSON metadata
+          jq -n \
+            --arg name "Raffaello Product Sync" \
+            --arg version "$VERSION" \
+            --arg download_url "https://github.com/danieledignani/raffaello-product-sync/releases/download/$VERSION/raffaello-product-sync.zip" \
+            --arg homepage "https://github.com/danieledignani/raffaello-product-sync" \
+            --arg last_updated "$TIMESTAMP" \
+            --argjson changelog "$CHANGELOG_HTML" \
+            '{
+              name: $name,
+              version: $version,
+              download_url: $download_url,
+              homepage: $homepage,
+              requires: "5.8",
+              tested: "6.8",
+              requires_php: "7.4",
+              last_updated: $last_updated,
+              upgrade_notice: "Aggiornamento automatico da GitHub",
+              author: "Daniele Dignani",
+              author_homepage: "https://github.com/danieledignani",
+              sections: {
+                description: "Sincronizzazione prodotti WooCommerce tra più store tramite REST API.",
+                installation: "Carica il plugin tramite il pannello Plugin > Aggiungi nuovo o scompatta nella cartella wp-content/plugins/",
+                changelog: $changelog
+              }
+            }' > "$JSON_PATH"
+
+      - name: Commit and push
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           git config user.name "GitHub Action"
           git config user.email "action@github.com"
-          git add .github/update-metadata/raffaello-product-sync.json
-          git commit -m "Update JSON to version $VERSION" || echo "Nessuna modifica."
+          git add CHANGELOG.md .github/update-metadata/raffaello-product-sync.json
+          git commit -m "Release $VERSION: aggiorna CHANGELOG.md e JSON metadata" || echo "Nessuna modifica."
           git push origin master
