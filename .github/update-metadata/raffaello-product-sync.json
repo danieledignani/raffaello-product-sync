@@ -1,0 +1,18 @@
+{
+  "name": "Raffaello Product Sync",
+  "version": "4.0.0",
+  "download_url": "https://github.com/danieledignani/raffaello-product-sync/releases/download/4.0.0/raffaello-product-sync.zip",
+  "homepage": "https://github.com/danieledignani/raffaello-product-sync",
+  "requires": "5.8",
+  "tested": "6.8",
+  "requires_php": "7.4",
+  "last_updated": "2026-03-30 12:00:00",
+  "upgrade_notice": "Versione 4.0 - Refactoring completo, logging DB, sync asincrono, aggiornamento automatico da GitHub",
+  "author": "Daniele Dignani",
+  "author_homepage": "https://github.com/danieledignani",
+  "sections": {
+    "description": "Sincronizzazione prodotti WooCommerce tra più store tramite REST API. Fork personalizzato con logging avanzato, sync asincrono e aggiornamento automatico da GitHub.",
+    "installation": "Carica il plugin tramite il pannello 'Plugin > Aggiungi nuovo' o scompatta nella cartella wp-content/plugins/",
+    "changelog": "<li>4.0.0 - Refactoring completo: architettura a classi, logging su database, bulk sync asincrono con Action Scheduler, aggiornamento automatico da GitHub</li>"
+  }
+}
