@@ -66,12 +66,17 @@ jobs:
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
           JSON_PATH=".github/update-metadata/raffaello-product-sync.json"
 
-          PREV_TAG=$(git tag --sort=-creatordate | grep -v "$VERSION" | head -n 1)
-
-          if [ -n "$PREV_TAG" ]; then
-            CHANGELOG=$(git log "$PREV_TAG..HEAD" --pretty=format:"<li>%s</li>" | jq -Rs .)
+          # Leggi changelog dal file CHANGELOG.md (ultime 3 versioni)
+          if [ -f "CHANGELOG.md" ]; then
+            # Estrai il contenuto tra i primi 3 heading ## e converti in HTML basico
+            CHANGELOG=$(awk '/^## \[/{n++} n<=3' CHANGELOG.md | \
+              sed 's/^## \[\(.*\)\] - \(.*\)/<h4>\1 (\2)<\/h4><ul>/' | \
+              sed 's/^### \(.*\)/<\/ul><h5>\1<\/h5><ul>/' | \
+              sed 's/^- \(.*\)/<li>\1<\/li>/' | \
+              grep -v '^$' | grep -v '^#' | grep -v '^Tutte' | \
+              jq -Rs .)
           else
-            CHANGELOG=$(echo "<li>Versione iniziale</li>" | jq -Rs .)
+            CHANGELOG=$(echo "<li>Vedi CHANGELOG.md su GitHub</li>" | jq -Rs .)
           fi
 
           cat <<EOF > $JSON_PATH

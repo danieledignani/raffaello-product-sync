@@ -163,4 +163,46 @@
         $('.rps-sites input[type="checkbox"]').prop('checked', checked);
     });
 
+    // ── Force Sync ──
+    $('#rps-force-sync-count-btn').on('click', function() {
+        var store = $('#rps-force-sync-store').val();
+        $(this).prop('disabled', true).text('Conteggio...');
+        $.post(rps_ajax.ajax_url, {
+            action: 'rps_force_sync_count',
+            nonce: rps_ajax.nonce,
+            store_url: store
+        }, function(resp) {
+            $('#rps-force-sync-count-btn').prop('disabled', false).text('Conta prodotti');
+            if (resp.success) {
+                var count = resp.data.count;
+                $('#rps-force-sync-count').text(count + ' prodotti');
+                $('#rps-force-sync-start').prop('disabled', count === 0);
+            }
+        });
+    });
+
+    $('#rps-force-sync-start').on('click', function() {
+        if (!confirm('Avviare il sync di tutti i prodotti flaggati?')) return;
+        var store = $('#rps-force-sync-store').val();
+        $(this).prop('disabled', true);
+        $.post(rps_ajax.ajax_url, {
+            action: 'rps_force_sync_start',
+            nonce: rps_ajax.nonce,
+            store_url: store
+        }, function(resp) {
+            if (resp.success) {
+                pollBatch(resp.data.batch_id);
+            } else {
+                alert(resp.data || 'Errore');
+                $('#rps-force-sync-start').prop('disabled', false);
+            }
+        });
+    });
+
+    // Reset count when store changes
+    $('#rps-force-sync-store').on('change', function() {
+        $('#rps-force-sync-count').text('-');
+        $('#rps-force-sync-start').prop('disabled', true);
+    });
+
 })(jQuery);

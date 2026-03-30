@@ -68,6 +68,10 @@ class RPS_Plugin {
         // ACF sync removal
         add_action( 'woocommerce_update_product', array( $this, 'handle_acf_sync_removal' ), 20, 1 );
 
+        // Force sync AJAX
+        add_action( 'wp_ajax_rps_force_sync_count', array( $this, 'ajax_force_sync_count' ) );
+        add_action( 'wp_ajax_rps_force_sync_start', array( $this, 'ajax_force_sync_start' ) );
+
         // Enqueue admin assets
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
     }
@@ -283,6 +287,84 @@ class RPS_Plugin {
         update_post_meta( $product_id, 'mpsrel', $mpsrel );
         update_post_meta( $product_id, 'sites_to_synch', $new_sites );
         RPS_Logger::instance()->info( 'acf_removal', "Prodotto {$product_id}, siti rimossi: " . implode( ', ', $removed ) );
+    }
+
+    public function ajax_force_sync_count() {
+        check_ajax_referer( 'rps_bulk_sync', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) wp_die();
+
+        $store_url = isset( $_POST['store_url'] ) ? sanitize_text_field( $_POST['store_url'] ) : '';
+        $product_ids = self::get_flagged_product_ids( $store_url );
+        wp_send_json_success( array( 'count' => count( $product_ids ) ) );
+    }
+
+    public function ajax_force_sync_start() {
+        check_ajax_referer( 'rps_bulk_sync', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) wp_die();
+
+        $store_url = isset( $_POST['store_url'] ) ? sanitize_text_field( $_POST['store_url'] ) : '';
+        $product_ids = self::get_flagged_product_ids( $store_url );
+
+        if ( empty( $product_ids ) ) {
+            wp_send_json_error( 'Nessun prodotto trovato' );
+            return;
+        }
+
+        // Determina quali store usare
+        $all_stores = get_option( 'wc_api_mps_stores', array() );
+        if ( $store_url === '__all__' ) {
+            $store_urls = array_keys( array_filter( $all_stores, function( $s ) { return ! empty( $s['status'] ); } ) );
+        } else {
+            $store_urls = array( $store_url );
+        }
+
+        $batch_id = RPS_Background_Sync::instance()->create_batch( $product_ids, $store_urls );
+        wp_send_json_success( array( 'batch_id' => $batch_id, 'count' => count( $product_ids ) ) );
+    }
+
+    /**
+     * Trova tutti i product ID flaggati per un dato store (o per qualsiasi store).
+     */
+    private static function get_flagged_product_ids( $store_url ) {
+        $stores = get_option( 'wc_api_mps_stores', array() );
+
+        // Trova i valori ACF da cercare
+        $acf_values = array();
+        if ( $store_url === '__all__' ) {
+            foreach ( $stores as $url => $data ) {
+                if ( ! empty( $data['status'] ) && ! empty( $data['acf_opt_value'] ) ) {
+                    $acf_values[] = $data['acf_opt_value'];
+                }
+            }
+        } else {
+            if ( isset( $stores[ $store_url ] ) && ! empty( $stores[ $store_url ]['acf_opt_value'] ) ) {
+                $acf_values[] = $stores[ $store_url ]['acf_opt_value'];
+            }
+        }
+
+        if ( empty( $acf_values ) ) return array();
+
+        // Query per prodotti che hanno almeno uno dei valori ACF in sites_to_synch
+        $args = array(
+            'post_type'      => 'product',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'meta_query'     => array(
+                'relation' => 'OR',
+            ),
+        );
+
+        foreach ( $acf_values as $val ) {
+            $args['meta_query'][] = array(
+                'key'     => 'sites_to_synch',
+                'value'   => $val,
+                'compare' => 'LIKE',
+            );
+        }
+
+        $query = new \WP_Query( $args );
+        return $query->posts;
     }
 
     public static function activate() {
