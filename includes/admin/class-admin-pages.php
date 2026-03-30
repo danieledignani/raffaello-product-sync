@@ -13,8 +13,7 @@ class RPS_Admin_Pages {
         add_menu_page( 'Raffaello Product Sync', 'Product Sync', 'manage_options', 'wc_api_mps', array( $this, 'stores_page' ), 'dashicons-update' );
         add_submenu_page( 'wc_api_mps', 'Product Sync - Stores', 'Stores', 'manage_options', 'wc_api_mps', array( $this, 'stores_page' ) );
         add_submenu_page( 'wc_api_mps', 'Product Sync - Bulk Sync', 'Bulk Sync', 'manage_options', 'wc_api_mps_bulk_sync', array( $this, 'bulk_sync_page' ) );
-        add_submenu_page( 'wc_api_mps', 'Product Sync - Force Sync', 'Force Sync', 'manage_options', 'wc_api_mps_force_sync', array( $this, 'force_sync_page' ) );
-        add_submenu_page( 'wc_api_mps', 'Product Sync - Sync Log', 'Sync Log', 'manage_options', 'wc_api_mps_sync_log', array( $this, 'sync_log_page' ) );
+        add_submenu_page( 'wc_api_mps', 'Product Sync - Log', 'Log', 'manage_options', 'wc_api_mps_sync_log', array( $this, 'sync_log_page' ) );
         add_submenu_page( 'wc_api_mps', 'Product Sync - Settings', 'Settings', 'manage_options', 'wc_api_mps_settings', array( $this, 'settings_page' ) );
     }
 
@@ -218,6 +217,33 @@ class RPS_Admin_Pages {
                 <button type="button" class="button" id="rps-cancel-batch">Annulla</button>
             </div>
 
+            <!-- Force Sync: sincronizza tutti i prodotti flaggati per uno store -->
+            <div style="background:#fff;border:1px solid #ccd0d4;padding:15px 20px;margin-bottom:20px;border-radius:4px;">
+                <h3 style="margin-top:0;">Force Sync per Store</h3>
+                <p class="description">Sincronizza tutti i prodotti flaggati per uno store specifico o per tutti gli store configurati.</p>
+                <table class="form-table" style="margin:0;"><tbody>
+                    <tr>
+                        <th style="width:150px;">Store</th>
+                        <td>
+                            <select id="rps-force-sync-store">
+                                <option value="__all__">Tutti gli store</option>
+                                <?php foreach ( $stores as $url => $data ) {
+                                    if ( ! empty( $data['status'] ) ) {
+                                        $name = ! empty( $data['store_name'] ) ? $data['store_name'] : $url;
+                                        echo '<option value="' . esc_attr( $url ) . '">' . esc_html( $name ) . ' (' . esc_url( $url ) . ')</option>';
+                                    }
+                                } ?>
+                            </select>
+                            <button type="button" class="button" id="rps-force-sync-count-btn">Conta prodotti</button>
+                            <span id="rps-force-sync-count" style="margin-left:8px;font-weight:bold;"></span>
+                        </td>
+                    </tr>
+                </tbody></table>
+                <p><button type="button" class="button button-primary" id="rps-force-sync-start" disabled>Avvia Force Sync in Background</button></p>
+            </div>
+
+            <h3>Sync Manuale per Selezione</h3>
+
             <!-- Filtri -->
             <form method="post">
                 <table class="form-table"><tbody>
@@ -303,54 +329,7 @@ class RPS_Admin_Pages {
         <?php
     }
 
-    // ──── FORCE SYNC PAGE ────
-    public function force_sync_page() {
-        $stores = get_option( 'wc_api_mps_stores', array() );
-        ?>
-        <div class="wrap">
-            <h1>Force Sync</h1><hr>
-            <p>Sincronizza tutti i prodotti flaggati per uno store specifico o per tutti gli store configurati.</p>
-
-            <!-- Progress area -->
-            <div id="rps-batch-progress" style="display:none;" class="rps-progress-container">
-                <h3>Sync in corso...</h3>
-                <div class="rps-progress-bar-outer"><div class="rps-progress-bar-inner" id="rps-progress-bar" style="width:0%"></div></div>
-                <p id="rps-progress-text">0 / 0 completati</p>
-                <p id="rps-progress-errors" style="color:#dc3232;"></p>
-                <button type="button" class="button" id="rps-cancel-batch">Annulla</button>
-            </div>
-
-            <table class="form-table"><tbody>
-                <tr>
-                    <th>Store</th>
-                    <td>
-                        <select id="rps-force-sync-store">
-                            <option value="__all__">Tutti gli store</option>
-                            <?php foreach ( $stores as $url => $data ) {
-                                if ( $data['status'] ) {
-                                    $name = ! empty( $data['store_name'] ) ? $data['store_name'] : $url;
-                                    echo '<option value="' . esc_attr( $url ) . '">' . esc_html( $name ) . ' (' . esc_url( $url ) . ')</option>';
-                                }
-                            } ?>
-                        </select>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Prodotti trovati</th>
-                    <td>
-                        <span id="rps-force-sync-count">-</span>
-                        <button type="button" class="button" id="rps-force-sync-count-btn">Conta prodotti</button>
-                    </td>
-                </tr>
-            </tbody></table>
-            <p class="submit">
-                <button type="button" class="button button-primary" id="rps-force-sync-start" disabled>Avvia Sync in Background</button>
-            </p>
-        </div>
-        <?php
-    }
-
-    // ──── SYNC LOG PAGE ────
+    // ──── LOG PAGE ────
     public function sync_log_page() {
         ?>
         <div class="wrap">
