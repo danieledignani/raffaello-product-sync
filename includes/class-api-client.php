@@ -55,33 +55,75 @@ if ( ! class_exists( 'WC_API_MPS' ) ) {
                 $args['body'] = wp_json_encode( $data );
             }
 
-            $log_context = array( 'store_url' => $this->site_url );
+            $log_context       = array( 'store_url' => $this->site_url );
+            $max_attempts      = 3;
+            $retryable_codes   = array( 500, 502, 503, 529 );
+            $wp_response       = null;
+            $response_code     = null;
 
-            // Execute
-            if ( strtoupper( $method ) === 'GET' ) {
-                $wp_response = wp_remote_get( $url, $args );
-            } elseif ( strtoupper( $method ) === 'DELETE' ) {
-                $wp_response = wp_remote_request( $url, $args );
-            } else {
-                $wp_response = wp_remote_post( $url, $args );
+            for ( $attempt = 1; $attempt <= $max_attempts; $attempt++ ) {
+                $is_last_attempt = ( $attempt === $max_attempts );
+
+                // Execute
+                if ( strtoupper( $method ) === 'GET' ) {
+                    $wp_response = wp_remote_get( $url, $args );
+                } elseif ( strtoupper( $method ) === 'DELETE' ) {
+                    $wp_response = wp_remote_request( $url, $args );
+                } else {
+                    $wp_response = wp_remote_post( $url, $args );
+                }
+
+                // Handle WP error (timeout, connection error) — retryable
+                if ( is_wp_error( $wp_response ) ) {
+                    if ( ! $is_last_attempt ) {
+                        $wait = pow( 2, $attempt ); // 2s, 4s
+                        $this->logger->warning( $caller ?: 'api_request', sprintf(
+                            'Tentativo %d/%d fallito (WP_Error: %s). Retry tra %d secondi - URL: %s',
+                            $attempt,
+                            $max_attempts,
+                            $wp_response->get_error_message(),
+                            $wait,
+                            $url
+                        ), $log_context );
+                        sleep( $wait );
+                        continue;
+                    }
+
+                    // Final attempt — log error and return null
+                    $this->logger->error( $caller ?: 'api_request', sprintf(
+                        'Errore di connessione: %s (Codice: %s) - URL: %s',
+                        $wp_response->get_error_message(),
+                        $wp_response->get_error_code(),
+                        $url
+                    ), array_merge( $log_context, array(
+                        'request_data'  => $data,
+                        'response_data' => $wp_response->get_error_message(),
+                    ) ) );
+                    return null;
+                }
+
+                $response_code = wp_remote_retrieve_response_code( $wp_response );
+
+                // Retry on specific server-side HTTP codes
+                if ( in_array( (int) $response_code, $retryable_codes, true ) && ! $is_last_attempt ) {
+                    $wait = pow( 2, $attempt ); // 2s, 4s
+                    $this->logger->warning( $caller ?: 'api_request', sprintf(
+                        'Tentativo %d/%d fallito (HTTP %d). Retry tra %d secondi - URL: %s',
+                        $attempt,
+                        $max_attempts,
+                        $response_code,
+                        $wait,
+                        $url
+                    ), $log_context );
+                    sleep( $wait );
+                    continue;
+                }
+
+                // Not retryable or last attempt — exit loop
+                break;
             }
 
-            // Handle WP error
-            if ( is_wp_error( $wp_response ) ) {
-                $this->logger->error( $caller ?: 'api_request', sprintf(
-                    'Errore di connessione: %s (Codice: %s) - URL: %s',
-                    $wp_response->get_error_message(),
-                    $wp_response->get_error_code(),
-                    $url
-                ), array_merge( $log_context, array(
-                    'request_data'  => $data,
-                    'response_data' => $wp_response->get_error_message(),
-                ) ) );
-                return null;
-            }
-
-            $response_code = wp_remote_retrieve_response_code( $wp_response );
-            $body = wp_remote_retrieve_body( $wp_response );
+            $body     = wp_remote_retrieve_body( $wp_response );
             $response = json_decode( $body );
 
             // HTTP errors

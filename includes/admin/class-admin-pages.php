@@ -333,6 +333,8 @@ class RPS_Admin_Pages {
             foreach ( $fields as $f ) { if ( isset( $_POST[$f] ) ) update_option( $f, sanitize_text_field( $_POST[$f] ) ); }
             $ints = array( 'wc_api_mps_stock_sync', 'wc_api_mps_product_delete', 'wc_api_mps_uninstall' );
             foreach ( $ints as $f ) { if ( isset( $_POST[$f] ) ) update_option( $f, (int) $_POST[$f] ); }
+            if ( isset( $_POST['wc_api_mps_email_notification'] ) ) update_option( 'wc_api_mps_email_notification', (int) $_POST['wc_api_mps_email_notification'] );
+            if ( isset( $_POST['wc_api_mps_email_recipient'] ) ) update_option( 'wc_api_mps_email_recipient', sanitize_email( $_POST['wc_api_mps_email_recipient'] ) );
             echo '<div class="notice notice-success is-dismissible"><p>Settings saved.</p></div>';
         }
 
@@ -343,6 +345,8 @@ class RPS_Admin_Pages {
         $stock = get_option( 'wc_api_mps_stock_sync' );
         $del = get_option( 'wc_api_mps_product_delete' );
         $uninst = get_option( 'wc_api_mps_uninstall' );
+        $email_notif = get_option( 'wc_api_mps_email_notification', 0 );
+        $email_recipient = get_option( 'wc_api_mps_email_recipient', get_option( 'admin_email' ) );
         ?>
         <div class="wrap"><h1>Settings</h1><hr>
             <form method="post"><?php wp_nonce_field( 'rps_settings_action' ); ?><table class="form-table"><tbody>
@@ -353,6 +357,8 @@ class RPS_Admin_Pages {
                 <tr><th>Stock Sync?</th><td><input type="hidden" name="wc_api_mps_stock_sync" value="0" /><input type="checkbox" name="wc_api_mps_stock_sync" value="1"<?php echo $stock?' checked':''; ?> /></td></tr>
                 <tr><th>Sync on product delete?</th><td><input type="hidden" name="wc_api_mps_product_delete" value="0" /><input type="checkbox" name="wc_api_mps_product_delete" value="1"<?php echo $del?' checked':''; ?> /></td></tr>
                 <tr><th>Delete data on uninstall?</th><td><input type="hidden" name="wc_api_mps_uninstall" value="0" /><input type="checkbox" name="wc_api_mps_uninstall" value="1"<?php echo $uninst?' checked':''; ?> /></td></tr>
+                <tr><th>Email al completamento bulk sync?</th><td><input type="hidden" name="wc_api_mps_email_notification" value="0" /><input type="checkbox" name="wc_api_mps_email_notification" value="1"<?php echo $email_notif?' checked':''; ?> /></td></tr>
+                <tr><th>Email destinatario</th><td><input type="email" name="wc_api_mps_email_recipient" value="<?php echo esc_attr( $email_recipient ); ?>" class="regular-text" /><p class="description">Lascia vuoto per usare l'email admin</p></td></tr>
             </tbody></table>
             <p class="submit"><input type="submit" name="submit" class="button button-primary" value="Save Changes"></p>
             </form>

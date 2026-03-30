@@ -5,7 +5,36 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class RPS_Taxonomy_Sync {
 
+    /**
+     * Genera la chiave per il transient cache.
+     *
+     * @param string $type   Tipo di tassonomia (category, tag, attribute, attribute_term, brand).
+     * @param int    $local_id ID locale del termine.
+     * @param string $url    URL dello store di destinazione.
+     * @return string
+     */
+    private static function cache_key( $type, $local_id, $url ) {
+        return 'rps_cache_' . $type . '_' . $local_id . '_' . md5( $url );
+    }
+
+    /**
+     * Elimina tutti i transient di cache rps_cache_ (utile per debug).
+     */
+    public static function clear_cache() {
+        global $wpdb;
+        $wpdb->query(
+            "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_rps_cache_%' OR option_name LIKE '_transient_timeout_rps_cache_%'"
+        );
+    }
+
     public static function destination_category_id( $api, $url, $category_id, $exclude_term_description ) {
+        // Controlla transient cache prima di qualsiasi chiamata API
+        $cache_key = self::cache_key( 'category', $category_id, $url );
+        $cached = get_transient( $cache_key );
+        if ( false !== $cached && (int) $cached > 0 ) {
+            return (int) $cached;
+        }
+
         $category = get_term( $category_id );
         $wc_api_mps = get_term_meta( $category_id, 'mpsrel', true );
         if ( ! is_array( $wc_api_mps ) ) $wc_api_mps = array();
@@ -65,10 +94,22 @@ class RPS_Taxonomy_Sync {
             update_term_meta( $category_id, 'mpsrel', $wc_api_mps );
         }
 
+        // Salva in transient cache solo se l'ID e' valido
+        if ( $dest_id ) {
+            set_transient( $cache_key, $dest_id, HOUR_IN_SECONDS );
+        }
+
         return $dest_id;
     }
 
     public static function destination_tag_id( $api, $url, $tag_id, $exclude_term_description ) {
+        // Controlla transient cache prima di qualsiasi chiamata API
+        $cache_key = self::cache_key( 'tag', $tag_id, $url );
+        $cached = get_transient( $cache_key );
+        if ( false !== $cached && (int) $cached > 0 ) {
+            return (int) $cached;
+        }
+
         $tag = get_term( $tag_id );
         $wc_api_mps = get_term_meta( $tag_id, 'mpsrel', true );
         if ( ! is_array( $wc_api_mps ) ) $wc_api_mps = array();
@@ -107,11 +148,26 @@ class RPS_Taxonomy_Sync {
 
         $wc_api_mps[ $url ] = $dest_id;
         update_term_meta( $tag_id, 'mpsrel', $wc_api_mps );
+
+        // Salva in transient cache solo se l'ID e' valido
+        if ( $dest_id ) {
+            set_transient( $cache_key, $dest_id, HOUR_IN_SECONDS );
+        }
+
         return $dest_id;
     }
 
     public static function destination_attribute_id( $api, $url, $attribute_slug, $attribute_data ) {
+        // Controlla transient cache per l'ID dell'attributo remoto
+        $cache_key = self::cache_key( 'attribute', crc32( $attribute_slug ), $url );
+        $cached = get_transient( $cache_key );
+
         $attribute_id = 0;
+        if ( false !== $cached && (int) $cached > 0 ) {
+            $attribute_id = (int) $cached;
+        }
+
+        if ( ! $attribute_id ) {
         $attributes = $api->getAttributes();
         if ( $attributes ) {
             foreach ( $attributes as $attr ) {
@@ -132,8 +188,12 @@ class RPS_Taxonomy_Sync {
                 if ( isset( $result->id ) ) $attribute_id = $result->id;
             }
         }
+        } // chiude if ( ! $attribute_id ) dal cache check
 
         if ( ! $attribute_id ) return array();
+
+        // Salva in transient cache solo se l'ID e' valido
+        set_transient( $cache_key, $attribute_id, HOUR_IN_SECONDS );
 
         $dest = array(
             'id'        => $attribute_id,
@@ -153,6 +213,16 @@ class RPS_Taxonomy_Sync {
     }
 
     public static function destination_attribute_term_id( $api, $url, $term_id, $attribute_id ) {
+        // Controlla transient cache prima di qualsiasi chiamata API
+        // NB: questo metodo ritorna il nome del termine, non l'ID,
+        // ma il cache serve per evitare le chiamate API di verifica/creazione
+        $cache_key = self::cache_key( 'attribute_term', $term_id, $url );
+        $cached = get_transient( $cache_key );
+        if ( false !== $cached && (int) $cached > 0 ) {
+            $term = get_term( $term_id );
+            return $term->name;
+        }
+
         $term = get_term( $term_id );
         $wc_api_mps = get_term_meta( $term_id, 'mpsrel', true );
         if ( ! is_array( $wc_api_mps ) ) $wc_api_mps = array();
@@ -184,10 +254,23 @@ class RPS_Taxonomy_Sync {
 
         $wc_api_mps[ $url ] = $dest_id;
         update_term_meta( $term_id, 'mpsrel', $wc_api_mps );
+
+        // Salva in transient cache solo se l'ID e' valido
+        if ( $dest_id ) {
+            set_transient( $cache_key, $dest_id, HOUR_IN_SECONDS );
+        }
+
         return $term->name;
     }
 
     public static function destination_brand_id( $api, $url, $brand_id, $exclude_term_description ) {
+        // Controlla transient cache prima di qualsiasi chiamata API
+        $cache_key = self::cache_key( 'brand', $brand_id, $url );
+        $cached = get_transient( $cache_key );
+        if ( false !== $cached && (int) $cached > 0 ) {
+            return (int) $cached;
+        }
+
         $brand = get_term( $brand_id );
         $wc_api_mps = get_term_meta( $brand_id, 'mpsrel', true );
         if ( ! is_array( $wc_api_mps ) ) $wc_api_mps = array();
@@ -248,6 +331,12 @@ class RPS_Taxonomy_Sync {
 
         $wc_api_mps[ $url ] = $dest_id;
         update_term_meta( $brand_id, 'mpsrel', $wc_api_mps );
+
+        // Salva in transient cache solo se l'ID e' valido
+        if ( $dest_id ) {
+            set_transient( $cache_key, $dest_id, HOUR_IN_SECONDS );
+        }
+
         return $dest_id;
     }
 }

@@ -26,6 +26,8 @@ if ( $uninstall ) {
     delete_option( 'wc_api_mps_stock_sync' );
     delete_option( 'wc_api_mps_product_delete' );
     delete_option( 'wc_api_mps_uninstall' );
+    delete_option( 'wc_api_mps_email_notification' );
+    delete_option( 'wc_api_mps_email_recipient' );
     delete_option( 'rps_db_version' );
 
     // Clean up batch options

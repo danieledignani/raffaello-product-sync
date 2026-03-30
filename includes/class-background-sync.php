@@ -115,9 +115,38 @@ class RPS_Background_Sync {
         if ( ( $batch_data['completed'] + $batch_data['failed'] ) >= $batch_data['total'] ) {
             $batch_data['status'] = 'completed';
             RPS_Logger::instance()->info( 'batch_complete', "Batch {$batch_id} completato: {$batch_data['completed']} ok, {$batch_data['failed']} errori" );
+
+            // Notifica email opzionale
+            self::maybe_send_completion_email( $batch_data );
         }
 
         update_option( $option_name, $batch_data, false );
+    }
+
+    /**
+     * Invia email di notifica al completamento del batch (se abilitato nelle impostazioni).
+     */
+    private static function maybe_send_completion_email( $batch_data ) {
+        $enabled = get_option( 'wc_api_mps_email_notification', 0 );
+        if ( ! $enabled ) return;
+
+        $to = get_option( 'wc_api_mps_email_recipient', get_option( 'admin_email' ) );
+        if ( ! $to ) return;
+
+        $subject = sprintf( 'Product Sync completato: %d ok, %d errori', $batch_data['completed'], $batch_data['failed'] );
+
+        $body = sprintf(
+            "Batch ID: %s\nCompletati: %d / %d\nErrori: %d\nAvviato da: utente #%s\nData: %s\n\nVedi il log completo: %s",
+            $batch_data['id'],
+            $batch_data['completed'],
+            $batch_data['total'],
+            $batch_data['failed'],
+            $batch_data['user_id'] ?? '-',
+            $batch_data['created_at'] ?? '-',
+            admin_url( 'admin.php?page=wc_api_mps_sync_log' )
+        );
+
+        wp_mail( $to, $subject, $body );
     }
 
     public function ajax_batch_status() {
