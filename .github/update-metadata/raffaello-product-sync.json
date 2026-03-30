@@ -1,18 +1,18 @@
 {
   "name": "Raffaello Product Sync",
-  "version": "4.0.1",
-  "download_url": "https://github.com/danieledignani/raffaello-product-sync/releases/download/4.0.1/raffaello-product-sync.zip",
+  "version": "4.1.0",
+  "download_url": "https://github.com/danieledignani/raffaello-product-sync/releases/download/4.1.0/raffaello-product-sync.zip",
   "homepage": "https://github.com/danieledignani/raffaello-product-sync",
   "requires": "5.8",
   "tested": "6.8",
   "requires_php": "7.4",
-  "last_updated": "2026-03-30 17:30:48",
+  "last_updated": "2026-03-30 20:08:11",
   "upgrade_notice": "Aggiornamento automatico da GitHub",
   "author": "Daniele Dignani",
   "author_homepage": "https://github.com/danieledignani",
   "sections": {
     "description": "Sincronizzazione prodotti WooCommerce tra più store tramite REST API.",
     "installation": "Carica il plugin tramite il pannello 'Plugin > Aggiungi nuovo' o scompatta nella cartella wp-content/plugins/",
-    "changelog": "<li>Fix: softprops/action-gh-release non ha v3, torna a v2 con Node24 flag</li>\n<li>Aggiorna GitHub Actions a Node.js 24 (checkout@v5, gh-release@v3)</li>\n<li>Rimuovi cartella Licensing (residuo plugin originale)</li>\n<li>Logger: MAX_ENTRIES=500, JSON completi, mask dati sensibili, toggle context</li>\n<li>Update JSON to version 4.0.0</li>"
+    "changelog": "<li>Fase 5: retry, cache transient, dashboard widget, email, cleanup</li>\n<li>Fix bug minori rimanenti</li>\n<li>Fix CSRF: nonce su tutti i form e AJAX handler</li>\n<li>Fix bug critici: variazioni, immagini, race condition, XSS, crash</li>\n<li>Update JSON to version 4.0.1</li>"
   }
 }
