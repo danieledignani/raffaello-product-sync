@@ -2,6 +2,13 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.2.1] - 2026-03-30
+
+### Modifiche
+- Riepilogo con link al Log al completamento batch, pre-filtro errori
+- Force Sync integrato in Bulk Sync, rimossa pagina separata, Log rinominato
+- Rimozione stock sync su ordini, fix immagini variazioni, pulizia
+
 ## [4.2.0] - 2026-03-30
 
 ### Modifiche

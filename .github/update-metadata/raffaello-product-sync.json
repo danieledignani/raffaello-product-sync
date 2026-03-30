@@ -1,18 +1,18 @@
 {
   "name": "Raffaello Product Sync",
-  "version": "4.2.0",
-  "download_url": "https://github.com/danieledignani/raffaello-product-sync/releases/download/4.2.0/raffaello-product-sync.zip",
+  "version": "4.2.1",
+  "download_url": "https://github.com/danieledignani/raffaello-product-sync/releases/download/4.2.1/raffaello-product-sync.zip",
   "homepage": "https://github.com/danieledignani/raffaello-product-sync",
   "requires": "5.8",
   "tested": "6.8",
   "requires_php": "7.4",
-  "last_updated": "2026-03-30 21:48:09",
+  "last_updated": "2026-03-30 23:09:07",
   "upgrade_notice": "Aggiornamento automatico da GitHub",
   "author": "Daniele Dignani",
   "author_homepage": "https://github.com/danieledignani",
   "sections": {
     "description": "Sincronizzazione prodotti WooCommerce tra più store tramite REST API.",
     "installation": "Carica il plugin tramite il pannello Plugin > Aggiungi nuovo o scompatta nella cartella wp-content/plugins/",
-    "changelog": "<h4>4.2.0 (2026-03-30)</h4><ul>\n</ul><h5>Modifiche</h5><ul>\n<li>Fix YAML workflow: riscritto per evitare errori parser, usa jq per JSON</li>\n<li>CHANGELOG.md storico + Force Sync per store</li>\n<h4>4.1.0 (2026-03-30)</h4><ul>\n</ul><h5>Aggiunto</h5><ul>\n<li>Retry con exponential backoff sulle chiamate API (max 3 tentativi su timeout/500/502/503)</li>\n<li>Cache transient per tassonomie remote (categorie, tag, brand, attributi) - evita chiamate API duplicate in bulk sync</li>\n<li>Dashboard widget nella home admin con stato sync, errori 24h, batch attivo</li>\n<li>Notifica email opzionale al completamento del bulk sync (configurabile in Settings)</li>\n</ul><h5>Fixato</h5><ul>\n<li>Bug minori: null check su image in taxonomy sync, before_delete_post filtrato per post type, formato exclude_meta_on_duplicate, posizione immagini sequenziale</li>\n<h4>4.0.1 (2026-03-30)</h4><ul>\n</ul><h5>Fixato</h5><ul>\n<li>Fix bug critici: variazioni non sincronizzate in full sync mode (scope issue nel refactoring)</li>\n<li>Fix mapping immagini rotto (images e variations ora passati via $extra reference)</li>\n<li>Fix date_created: gestione corretta di WC_DateTime invece di strtotime su oggetto</li>\n<li>Fix crash su wc_get_order() che tornava false</li>\n<li>Fix race condition nei contatori batch con Action Scheduler concorrente</li>\n<li>Fix cancel batch che cancellava tutti i batch invece di solo quello target</li>\n<li>Fix XSS nel log viewer (escape di message, context, store_url)</li>\n<li>Fix CSRF: aggiunto nonce su tutti i form admin (stores, settings) e AJAX (auto sync, manual sync, stock update)</li>\n<li>Rimosso wp_ajax_nopriv su stock update (endpoint exploitable senza autenticazione)</li>\n<li>Rimossa chiamata wc_api_mps_add_site_to_synch(0) che sporcava il DB</li>\n</ul><h5>Sicurezza</h5><ul>\n<li>Sanitizzazione URL store con esc_url_raw()</li>\n<li>Conferma JavaScript prima di eliminare uno store</li>\n"
+    "changelog": "<h4>4.2.1 (2026-03-30)</h4><ul>\n</ul><h5>Modifiche</h5><ul>\n<li>Riepilogo con link al Log al completamento batch, pre-filtro errori</li>\n<li>Force Sync integrato in Bulk Sync, rimossa pagina separata, Log rinominato</li>\n<li>Rimozione stock sync su ordini, fix immagini variazioni, pulizia</li>\n<h4>4.2.0 (2026-03-30)</h4><ul>\n</ul><h5>Modifiche</h5><ul>\n<li>Fix YAML workflow: riscritto per evitare errori parser, usa jq per JSON</li>\n<li>CHANGELOG.md storico + Force Sync per store</li>\n<h4>4.1.0 (2026-03-30)</h4><ul>\n</ul><h5>Aggiunto</h5><ul>\n<li>Retry con exponential backoff sulle chiamate API (max 3 tentativi su timeout/500/502/503)</li>\n<li>Cache transient per tassonomie remote (categorie, tag, brand, attributi) - evita chiamate API duplicate in bulk sync</li>\n<li>Dashboard widget nella home admin con stato sync, errori 24h, batch attivo</li>\n<li>Notifica email opzionale al completamento del bulk sync (configurabile in Settings)</li>\n</ul><h5>Fixato</h5><ul>\n<li>Bug minori: null check su image in taxonomy sync, before_delete_post filtrato per post type, formato exclude_meta_on_duplicate, posizione immagini sequenziale</li>\n"
   }
 }
