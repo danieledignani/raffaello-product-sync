@@ -6,13 +6,13 @@
   "requires": "5.8",
   "tested": "6.8",
   "requires_php": "7.4",
-  "last_updated": "2026-03-30 12:00:00",
-  "upgrade_notice": "Versione 4.0 - Refactoring completo, logging DB, sync asincrono, aggiornamento automatico da GitHub",
+  "last_updated": "2026-03-30 17:17:28",
+  "upgrade_notice": "Aggiornamento automatico da GitHub",
   "author": "Daniele Dignani",
   "author_homepage": "https://github.com/danieledignani",
   "sections": {
-    "description": "Sincronizzazione prodotti WooCommerce tra più store tramite REST API. Fork personalizzato con logging avanzato, sync asincrono e aggiornamento automatico da GitHub.",
+    "description": "Sincronizzazione prodotti WooCommerce tra più store tramite REST API.",
     "installation": "Carica il plugin tramite il pannello 'Plugin > Aggiungi nuovo' o scompatta nella cartella wp-content/plugins/",
-    "changelog": "<li>4.0.0 - Refactoring completo: architettura a classi, logging su database, bulk sync asincrono con Action Scheduler, aggiornamento automatico da GitHub</li>"
+    "changelog": "<li>Versione iniziale</li>\n"
   }
 }
