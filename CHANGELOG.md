@@ -2,6 +2,12 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.2.0] - 2026-03-30
+
+### Modifiche
+- Fix YAML workflow: riscritto per evitare errori parser, usa jq per JSON
+- CHANGELOG.md storico + Force Sync per store
+
 ## [4.1.0] - 2026-03-30
 
 ### Aggiunto
