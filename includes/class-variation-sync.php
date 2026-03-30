@@ -61,6 +61,16 @@ class RPS_Variation_Sync {
             // Prepara dati variazione
             $data = self::build_variation_data( $product_info, $vid_data );
 
+            // Map variation image (cerca ID remoto prima di inviare src)
+            if ( ! empty( $vid_data['image_id'] ) ) {
+                $dest_img_id = RPS_Image_Sync::get_destination_image_id( $api, $url, $vid_data['image_id'] );
+                if ( $dest_img_id ) {
+                    $data['image'] = array( 'id' => $dest_img_id );
+                } else {
+                    $data['image'] = array( 'src' => wp_get_attachment_url( $vid_data['image_id'] ) );
+                }
+            }
+
             // Price adjustment
             RPS_Price_Adjuster::apply( $data, $vid_data, $store_config );
 
@@ -212,10 +222,7 @@ class RPS_Variation_Sync {
             $result['attributes'] = $attrs;
         }
 
-        // Image
-        if ( isset( $data['image_id'] ) && $data['image_id'] ) {
-            $result['image'] = array( 'src' => wp_get_attachment_url( $data['image_id'] ) );
-        }
+        // Image: il mapping con destination image ID viene gestito in sync()
 
         return $result;
     }

@@ -99,10 +99,10 @@ class RPS_Background_Sync {
             RPS_Logger::instance()->error( 'batch_sync', "Errore sync prodotto {$product_id}: " . $e->getMessage(), array( 'product_id' => $product_id ) );
         }
 
-        // Incremento atomico per evitare race condition con worker concorrenti
-        global $wpdb;
+        // Aggiorna contatori batch — wp_cache_delete forza lettura dal DB
+        // per ridurre race condition con worker concorrenti
         $option_name = $this->batch_option_prefix . $batch_id;
-        // Rileggi il batch data fresco dal DB (un altro worker potrebbe averlo aggiornato)
+        wp_cache_delete( $option_name, 'options' );
         $batch_data = get_option( $option_name );
         if ( ! $batch_data ) return;
 

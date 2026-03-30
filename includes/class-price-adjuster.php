@@ -24,8 +24,7 @@ class RPS_Price_Adjuster {
             if ( ! isset( $product_info_data[ $field ] ) || $product_info_data[ $field ] === '' ) continue;
 
             $original = (float) $product_info_data[ $field ];
-            if ( ! $original && $field === 'regular_price' ) continue;
-            if ( ! $original && $field === 'sale_price' ) continue;
+            if ( ! $original ) continue;
 
             if ( $type == 'percentage' ) {
                 $adjustment = ( $original * $amount ) / 100;

@@ -47,17 +47,6 @@ class RPS_Plugin {
         // Save post hook (inline edit, REST API)
         add_action( 'save_post', array( $this, 'save_post' ), 20, 1 );
 
-        // Stock update on order status changes
-        add_action( 'woocommerce_order_status_processing', array( $this, 'stock_update' ), 20, 1 );
-        add_action( 'woocommerce_order_status_on-hold', array( $this, 'stock_update' ), 20, 1 );
-        add_action( 'woocommerce_order_status_completed', array( $this, 'stock_update' ), 20, 1 );
-        add_action( 'woocommerce_order_status_cancelled', array( $this, 'stock_update' ), 20, 1 );
-        add_action( 'woocommerce_order_status_refunded', array( $this, 'stock_update' ), 20, 1 );
-
-        // Stock update on thank you page (frontend AJAX, solo utenti loggati)
-        add_action( 'woocommerce_thankyou', array( $this, 'thankyou_stock_update' ), 20, 1 );
-        add_action( 'wp_ajax_wc_api_mps_auto_stock_update', array( $this, 'ajax_stock_update' ), 20 );
-
         // Sync on product trash/delete
         add_action( 'wp_trash_post', array( $this, 'trash_post' ), 20, 1 );
         add_action( 'before_delete_post', array( $this, 'before_delete_post' ), 20, 1 );
@@ -159,81 +148,6 @@ class RPS_Plugin {
             RPS_Logger::instance()->info( 'save_post', "Sync triggered for product {$post_id} via " . ( $inline_edit ? 'inline edit' : 'REST API' ) );
             RPS_Product_Sync::sync( $post_id, $stores );
         }
-    }
-
-    public function stock_update( $order_id ) {
-        $stock_sync = get_option( 'wc_api_mps_stock_sync' );
-        if ( ! $stock_sync ) return;
-
-        $sync_type = get_option( 'wc_api_mps_sync_type' );
-        if ( $sync_type == 'auto' && is_admin() ) {
-            $order = wc_get_order( $order_id );
-            if ( ! $order ) return;
-
-            $items = $order->get_items();
-            $product_ids = array();
-            foreach ( $items as $item ) {
-                $data = $item->get_data();
-                $product_ids[ $data['product_id'] ] = $data['product_id'];
-            }
-
-            $stores = get_option( 'wc_api_mps_stores' );
-            foreach ( $product_ids as $product_id ) {
-                $disable_auto_sync = get_post_meta( $product_id, 'wc_api_mps_disable_auto_sync', true );
-                if ( ! $disable_auto_sync ) {
-                    RPS_Product_Sync::sync( $product_id, $stores, 'quantity' );
-                }
-            }
-        }
-    }
-
-    public function thankyou_stock_update( $order_id ) {
-        $stock_sync = get_option( 'wc_api_mps_stock_sync' );
-        if ( ! $stock_sync ) return;
-
-        $sync = get_post_meta( $order_id, 'wc_api_mps_sync', true );
-        $sync_type = get_option( 'wc_api_mps_sync_type' );
-        if ( $sync_type == 'auto' && ! $sync ) {
-            update_post_meta( $order_id, 'wc_api_mps_sync', 1 );
-            ?>
-            <script type="text/javascript">
-                jQuery( document ).ready( function( $ ) {
-                    $.post( '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>', {
-                        'action': 'wc_api_mps_auto_stock_update',
-                        '_ajax_nonce': '<?php echo wp_create_nonce( 'rps_stock_update' ); ?>',
-                        'order_id': <?php echo esc_attr( $order_id ); ?>
-                    });
-                });
-            </script>
-            <?php
-        }
-    }
-
-    public function ajax_stock_update() {
-        check_ajax_referer( 'rps_stock_update' );
-        $stock_sync = get_option( 'wc_api_mps_stock_sync' );
-        if ( ! $stock_sync ) { wp_die(); return; }
-
-        $order_id = ( isset( $_POST['order_id'] ) ? (int) $_POST['order_id'] : 0 );
-        if ( $order_id ) {
-            $order = wc_get_order( $order_id );
-            if ( ! $order ) { wp_die(); return; }
-            $items = $order->get_items();
-            $product_ids = array();
-            foreach ( $items as $item ) {
-                $data = $item->get_data();
-                $product_ids[ $data['product_id'] ] = $data['product_id'];
-            }
-
-            $stores = get_option( 'wc_api_mps_stores' );
-            foreach ( $product_ids as $product_id ) {
-                $disable_auto_sync = get_post_meta( $product_id, 'wc_api_mps_disable_auto_sync', true );
-                if ( ! $disable_auto_sync ) {
-                    RPS_Product_Sync::sync( $product_id, $stores, 'quantity' );
-                }
-            }
-        }
-        wp_die();
     }
 
     public function trash_post( $post_id ) {
