@@ -28,19 +28,39 @@
             }
 
             $.each(data.items, function(i, row) {
-                var levelClass = row.level === 'error' ? 'style="color:#dc3232;font-weight:bold"' :
-                                 row.level === 'warning' ? 'style="color:#dba617;font-weight:bold"' : '';
+                var levelColors = { error: '#dc3232', warning: '#dba617', info: '#0073aa', debug: '#6c757d' };
+                var color = levelColors[row.level] || '#333';
+                var hasData = row.request_data || row.response_data;
+                var toggleBtn = hasData ? '<button type="button" class="button button-small rps-toggle-context" data-target="rps-ctx-' + row.id + '">&darr;</button>' : '';
+
                 tbody.append(
                     '<tr>' +
-                    '<td>' + row.timestamp + '</td>' +
-                    '<td ' + levelClass + '>' + row.level.toUpperCase() + '</td>' +
-                    '<td>' + (row.context || '') + '</td>' +
+                    '<td><code style="font-size:12px">' + row.timestamp + '</code></td>' +
+                    '<td><span style="background:' + color + ';color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600">' + row.level.toUpperCase() + '</span></td>' +
+                    '<td><code>' + (row.context || '') + '</code></td>' +
                     '<td>' + row.message + '</td>' +
                     '<td>' + (row.product_id || '-') + '</td>' +
                     '<td style="font-size:11px">' + (row.store_url || '-') + '</td>' +
                     '<td>' + (row.user_id || '-') + '</td>' +
+                    '<td>' + toggleBtn + '</td>' +
                     '</tr>'
                 );
+
+                // Riga espandibile con request/response JSON
+                if (hasData) {
+                    var reqHtml = '', resHtml = '';
+                    if (row.request_data) {
+                        try { reqHtml = JSON.stringify(JSON.parse(row.request_data), null, 2); } catch(e) { reqHtml = row.request_data; }
+                    }
+                    if (row.response_data) {
+                        try { resHtml = JSON.stringify(JSON.parse(row.response_data), null, 2); } catch(e) { resHtml = row.response_data; }
+                    }
+                    var details = '';
+                    if (reqHtml) details += '<strong>Request:</strong><pre style="background:#f5f5f5;padding:10px;overflow-x:auto;font-size:11px;border-radius:4px;max-height:300px">' + $('<div>').text(reqHtml).html() + '</pre>';
+                    if (resHtml) details += '<strong>Response:</strong><pre style="background:#f5f5f5;padding:10px;overflow-x:auto;font-size:11px;border-radius:4px;max-height:300px">' + $('<div>').text(resHtml).html() + '</pre>';
+
+                    tbody.append('<tr id="rps-ctx-' + row.id + '" style="display:none"><td colspan="8">' + details + '</td></tr>');
+                }
             });
 
             // Pagination
@@ -57,6 +77,15 @@
             }
         });
     }
+
+    // Toggle context rows
+    $(document).on('click', '.rps-toggle-context', function() {
+        var targetId = $(this).data('target');
+        var $row = $('#' + targetId);
+        var isVisible = $row.is(':visible');
+        $row.toggle();
+        $(this).text(isVisible ? '\u2193' : '\u2191');
+    });
 
     $(document).on('click', '#rps-log-pagination a.page-numbers', function(e) {
         e.preventDefault();

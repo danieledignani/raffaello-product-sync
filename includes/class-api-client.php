@@ -109,6 +109,19 @@ if ( ! class_exists( 'WC_API_MPS' ) ) {
                 ) ) );
             }
 
+            // Log completo anche per chiamate riuscite (per debug)
+            if ( $response_code >= 200 && $response_code < 400 && $data !== null ) {
+                $this->logger->info( $caller ?: 'api_request', sprintf(
+                    'HTTP %d - %s %s',
+                    $response_code,
+                    strtoupper( $method ),
+                    $endpoint
+                ), array_merge( $log_context, array(
+                    'request_data'  => $data,
+                    'response_data' => $body,
+                ) ) );
+            }
+
             // 404 special handling
             if ( $response_code == 404 ) {
                 return (object) array( 'code' => 404 );

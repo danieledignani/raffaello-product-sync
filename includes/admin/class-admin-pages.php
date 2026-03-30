@@ -310,8 +310,8 @@ class RPS_Admin_Pages {
                 <a class="button" id="rps-log-export-btn" href="#">Esporta CSV</a>
             </div>
             <table class="wp-list-table widefat fixed striped" id="rps-log-table">
-                <thead><tr><th style="width:150px">Timestamp</th><th style="width:70px">Level</th><th style="width:120px">Context</th><th>Message</th><th style="width:80px">Product</th><th style="width:200px">Store</th><th style="width:50px">User</th></tr></thead>
-                <tbody id="rps-log-tbody"><tr><td colspan="7">Caricamento...</td></tr></tbody>
+                <thead><tr><th style="width:150px">Timestamp</th><th style="width:70px">Level</th><th style="width:120px">Context</th><th>Message</th><th style="width:80px">Product</th><th style="width:200px">Store</th><th style="width:50px">User</th><th style="width:30px"></th></tr></thead>
+                <tbody id="rps-log-tbody"><tr><td colspan="8">Caricamento...</td></tr></tbody>
             </table>
             <div id="rps-log-pagination" class="tablenav"><div class="tablenav-pages"></div></div>
         </div>

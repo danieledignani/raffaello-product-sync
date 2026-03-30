@@ -5,6 +5,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class RPS_Logger {
 
+    const MAX_ENTRIES = 500;
+
     private static $instance = null;
     private $table_name;
 
@@ -24,12 +26,6 @@ class RPS_Logger {
             self::create_table();
             update_option( 'rps_db_version', RPS_VERSION );
         }
-
-        // Pulizia automatica log vecchi (giornaliera)
-        if ( ! wp_next_scheduled( 'rps_cleanup_logs' ) ) {
-            wp_schedule_event( time(), 'daily', 'rps_cleanup_logs' );
-        }
-        add_action( 'rps_cleanup_logs', array( $this, 'cleanup_old_logs' ) );
 
         // AJAX per log viewer
         add_action( 'wp_ajax_rps_get_logs', array( $this, 'ajax_get_logs' ) );
@@ -81,13 +77,57 @@ class RPS_Logger {
             $data['store_url'] = substr( $extra['store_url'], 0, 255 );
         }
         if ( isset( $extra['request_data'] ) ) {
-            $data['request_data'] = is_string( $extra['request_data'] ) ? $extra['request_data'] : wp_json_encode( $extra['request_data'] );
+            $safe = is_string( $extra['request_data'] ) ? $extra['request_data'] : wp_json_encode( self::mask_sensitive_data( $extra['request_data'] ), JSON_UNESCAPED_UNICODE );
+            $data['request_data'] = $safe;
         }
         if ( isset( $extra['response_data'] ) ) {
-            $data['response_data'] = is_string( $extra['response_data'] ) ? $extra['response_data'] : wp_json_encode( $extra['response_data'] );
+            $safe = is_string( $extra['response_data'] ) ? $extra['response_data'] : wp_json_encode( self::mask_sensitive_data( $extra['response_data'] ), JSON_UNESCAPED_UNICODE );
+            $data['response_data'] = $safe;
         }
 
         $wpdb->insert( $this->table_name, $data );
+
+        // Prune: mantieni solo le ultime MAX_ENTRIES righe
+        self::prune_old_entries();
+    }
+
+    /**
+     * Maschera dati sensibili (consumer_key, consumer_secret, password, token).
+     */
+    private static function mask_sensitive_data( $data ) {
+        if ( ! is_array( $data ) && ! is_object( $data ) ) {
+            return $data;
+        }
+
+        $sensitive_keys = array( 'consumer_key', 'consumer_secret', 'password', 'access_token', 'refresh_token', 'client_secret' );
+        $result = (array) $data;
+
+        foreach ( $result as $key => &$value ) {
+            if ( is_array( $value ) || is_object( $value ) ) {
+                $value = self::mask_sensitive_data( $value );
+            } elseif ( is_string( $value ) && in_array( $key, $sensitive_keys, true ) ) {
+                $value = strlen( $value ) > 8 ? substr( $value, 0, 4 ) . '****' . substr( $value, -4 ) : '****';
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Rimuove i log più vecchi mantenendo solo le ultime MAX_ENTRIES.
+     */
+    private static function prune_old_entries() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'rps_sync_log';
+        $count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table" );
+
+        if ( $count > self::MAX_ENTRIES ) {
+            $delete_count = $count - self::MAX_ENTRIES;
+            $wpdb->query( $wpdb->prepare(
+                "DELETE FROM $table ORDER BY timestamp ASC LIMIT %d",
+                $delete_count
+            ) );
+        }
     }
 
     public function debug( $context, $message, $extra = array() ) {
@@ -183,12 +223,8 @@ class RPS_Logger {
     }
 
     public function cleanup_old_logs() {
-        global $wpdb;
-        $days = (int) apply_filters( 'rps_log_retention_days', 30 );
-        $wpdb->query( $wpdb->prepare(
-            "DELETE FROM {$this->table_name} WHERE timestamp < DATE_SUB(NOW(), INTERVAL %d DAY)",
-            $days
-        ) );
+        // Con MAX_ENTRIES + prune_old_entries(), la pulizia per data è un fallback extra
+        self::prune_old_entries();
     }
 
     public function ajax_get_logs() {
