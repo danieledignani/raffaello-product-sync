@@ -56,7 +56,7 @@ class RPS_Taxonomy_Sync {
             $result = $api->addCategory( $data );
             if ( isset( $result->id ) ) {
                 $dest_id = $result->id;
-                if ( $result->image && $image_id ) {
+                if ( isset( $result->image ) && $result->image && $image_id ) {
                     RPS_Image_Sync::set_destination_image_id( $url, $image_id, $result->image->id );
                 }
             }
@@ -242,7 +242,7 @@ class RPS_Taxonomy_Sync {
             if ( isset( $result->id ) ) $dest_id = $result->id;
         }
 
-        if ( isset( $result->id ) && $result->image && $image_id ) {
+        if ( isset( $result->id ) && isset( $result->image ) && $result->image && $image_id ) {
             RPS_Image_Sync::set_destination_image_id( $url, $image_id, $result->image->id );
         }
 

@@ -245,11 +245,14 @@ class RPS_Plugin {
     }
 
     public function before_delete_post( $post_id ) {
-        RPS_Product_Sync::delete_remote_product( $post_id );
+        $post_type = get_post_type( $post_id );
+        if ( $post_type === 'product' || $post_type === 'product_variation' ) {
+            RPS_Product_Sync::delete_remote_product( $post_id );
+        }
     }
 
     public function exclude_meta_on_duplicate( $meta_to_exclude ) {
-        $meta_to_exclude['mpsrel'] = 'mpsrel';
+        $meta_to_exclude[] = 'mpsrel';
         return $meta_to_exclude;
     }
 

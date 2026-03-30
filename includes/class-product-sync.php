@@ -380,14 +380,18 @@ class RPS_Product_Sync {
         }
 
         // Images - salva in $extra per il mapping nello store loop
+        $data['images'] = array();
+        $img_pos = 0;
         if ( isset( $pid['image_id'] ) && $pid['image_id'] ) {
-            $data['images'][] = array( 'id' => $pid['image_id'], 'src' => wp_get_attachment_url( $pid['image_id'] ), 'position' => 0 );
+            $data['images'][] = array( 'id' => $pid['image_id'], 'src' => wp_get_attachment_url( $pid['image_id'] ), 'position' => $img_pos++ );
         }
         if ( ! empty( $pid['gallery_image_ids'] ) ) {
-            $pos = isset( $data['images'] ) ? count( $data['images'] ) : 1;
             foreach ( $pid['gallery_image_ids'] as $gid ) {
-                $data['images'][] = array( 'id' => $gid, 'src' => wp_get_attachment_url( $gid ), 'position' => $pos++ );
+                $data['images'][] = array( 'id' => $gid, 'src' => wp_get_attachment_url( $gid ), 'position' => $img_pos++ );
             }
+        }
+        if ( empty( $data['images'] ) ) {
+            unset( $data['images'] );
         }
         if ( ! empty( $data['images'] ) ) {
             $extra['images'] = $data['images'];
