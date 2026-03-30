@@ -53,10 +53,9 @@ class RPS_Plugin {
         add_action( 'woocommerce_order_status_cancelled', array( $this, 'stock_update' ), 20, 1 );
         add_action( 'woocommerce_order_status_refunded', array( $this, 'stock_update' ), 20, 1 );
 
-        // Stock update on thank you page (frontend AJAX)
+        // Stock update on thank you page (frontend AJAX, solo utenti loggati)
         add_action( 'woocommerce_thankyou', array( $this, 'thankyou_stock_update' ), 20, 1 );
         add_action( 'wp_ajax_wc_api_mps_auto_stock_update', array( $this, 'ajax_stock_update' ), 20 );
-        add_action( 'wp_ajax_nopriv_wc_api_mps_auto_stock_update', array( $this, 'ajax_stock_update' ), 20 );
 
         // Sync on product trash/delete
         add_action( 'wp_trash_post', array( $this, 'trash_post' ), 20, 1 );
@@ -97,6 +96,7 @@ class RPS_Plugin {
                         jQuery( document ).ready( function( $ ) {
                             $.post( '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>', {
                                 'action': 'wc_api_mps_auto_sync',
+                                '_ajax_nonce': '<?php echo wp_create_nonce( 'rps_sync_action' ); ?>',
                                 'product_id': <?php echo esc_attr( $post_id ); ?>
                             });
                         });
@@ -108,6 +108,7 @@ class RPS_Plugin {
     }
 
     public function ajax_auto_sync() {
+        check_ajax_referer( 'rps_sync_action' );
         $product_id = ( isset( $_POST['product_id'] ) ? (int) $_POST['product_id'] : 0 );
         if ( $product_id ) {
             $stores = get_option( 'wc_api_mps_stores' );
@@ -117,8 +118,9 @@ class RPS_Plugin {
     }
 
     public function ajax_manual_sync() {
+        check_ajax_referer( 'rps_sync_action' );
         $product_id = ( isset( $_POST['product_id'] ) ? (int) $_POST['product_id'] : 0 );
-        $selected_stores = ( isset( $_POST['stores'] ) ? $_POST['stores'] : array() );
+        $selected_stores = ( isset( $_POST['stores'] ) ? array_map( 'sanitize_text_field', $_POST['stores'] ) : array() );
         if ( $product_id && ! empty( $selected_stores ) ) {
             $stores = get_option( 'wc_api_mps_stores' );
             $filtered = array();
@@ -193,6 +195,7 @@ class RPS_Plugin {
                 jQuery( document ).ready( function( $ ) {
                     $.post( '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>', {
                         'action': 'wc_api_mps_auto_stock_update',
+                        '_ajax_nonce': '<?php echo wp_create_nonce( 'rps_stock_update' ); ?>',
                         'order_id': <?php echo esc_attr( $order_id ); ?>
                     });
                 });
@@ -202,6 +205,7 @@ class RPS_Plugin {
     }
 
     public function ajax_stock_update() {
+        check_ajax_referer( 'rps_stock_update' );
         $stock_sync = get_option( 'wc_api_mps_stock_sync' );
         if ( ! $stock_sync ) { wp_die(); return; }
 

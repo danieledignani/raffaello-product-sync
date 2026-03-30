@@ -61,7 +61,7 @@ class RPS_Metabox {
                         $(this).prop('disabled', true);
                         $('.wc_api_mps_spinner').addClass('is-active');
                         $.post('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', {
-                            action: 'wc_api_mps_manual_sync', product_id: <?php echo $post_id; ?>, stores: stores
+                            action: 'wc_api_mps_manual_sync', _ajax_nonce: '<?php echo wp_create_nonce( 'rps_sync_action' ); ?>', product_id: <?php echo $post_id; ?>, stores: stores
                         }, function() {
                             $('#wc_api_mps_manual_sync_button').prop('disabled', false);
                             $('.wc_api_mps_spinner').removeClass('is-active');

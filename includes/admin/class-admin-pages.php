@@ -22,9 +22,10 @@ class RPS_Admin_Pages {
         $page_url = menu_page_url( 'wc_api_mps', 0 );
 
         if ( isset( $_POST['submit'] ) ) {
+            check_admin_referer( 'rps_stores_action' );
             $stores = get_option( 'wc_api_mps_stores' );
             if ( ! is_array( $stores ) ) $stores = array();
-            $stores[ $_POST['url'] ] = array(
+            $stores[ esc_url_raw( $_POST['url'] ) ] = array(
                 'store_name' => sanitize_text_field( $_POST['store_name'] ),
                 'store_abbreviation' => sanitize_text_field( $_POST['store_abbreviation'] ),
                 'acf_opt_value' => sanitize_text_field( $_POST['acf_opt_value'] ),
@@ -51,11 +52,12 @@ class RPS_Admin_Pages {
                 echo '<div class="notice notice-success is-dismissible"><p>Store added successfully.</p></div>';
             }
         } elseif ( isset( $_POST['update'] ) ) {
+            check_admin_referer( 'rps_stores_action' );
             if ( ! isset( $_POST['exclude_categories_products'] ) ) $_POST['exclude_categories_products'] = array();
             if ( ! isset( $_POST['exclude_brands_products'] ) ) $_POST['exclude_brands_products'] = array();
             if ( ! isset( $_POST['exclude_tags_products'] ) ) $_POST['exclude_tags_products'] = array();
             $stores = get_option( 'wc_api_mps_stores' );
-            $stores[ $_POST['url'] ] = array(
+            $stores[ esc_url_raw( $_POST['url'] ) ] = array(
                 'store_name' => sanitize_text_field( $_POST['store_name'] ),
                 'store_abbreviation' => sanitize_text_field( $_POST['store_abbreviation'] ),
                 'acf_opt_value' => sanitize_text_field( $_POST['acf_opt_value'] ),
@@ -81,11 +83,13 @@ class RPS_Admin_Pages {
                 update_option( 'wc_api_mps_stores', $stores );
                 echo '<div class="notice notice-success is-dismissible"><p>Store updated successfully.</p></div>';
             }
-        } elseif ( isset( $_REQUEST['delete'] ) ) {
-            $stores = get_option( 'wc_api_mps_stores' );
-            unset( $stores[ rawurldecode( $_REQUEST['delete'] ) ] );
-            update_option( 'wc_api_mps_stores', $stores );
-            echo '<div class="notice notice-success is-dismissible"><p>Store removed successfully.</p></div>';
+        } elseif ( isset( $_REQUEST['delete'] ) && isset( $_REQUEST['_wpnonce'] ) ) {
+            if ( wp_verify_nonce( $_REQUEST['_wpnonce'], 'rps_delete_store' ) ) {
+                $stores = get_option( 'wc_api_mps_stores' );
+                unset( $stores[ rawurldecode( $_REQUEST['delete'] ) ] );
+                update_option( 'wc_api_mps_stores', $stores );
+                echo '<div class="notice notice-success is-dismissible"><p>Store removed successfully.</p></div>';
+            }
         }
 
         ?>
@@ -100,6 +104,7 @@ class RPS_Admin_Pages {
                 ?>
                 <h2>Edit store: <?php echo esc_url( rawurldecode( $_REQUEST['edit'] ) ); ?></h2>
                 <form method="post" action="<?php echo esc_url( $page_url ); ?>">
+                    <?php wp_nonce_field( 'rps_stores_action' ); ?>
                     <table class="form-table"><tbody>
                         <tr><th>Status</th><td><input type="hidden" name="status" value="0" /><input type="checkbox" name="status" value="1"<?php echo $store['status'] ? ' checked' : ''; ?> /></td></tr>
                         <tr><th>Store Name <span class="description">(required)</span></th><td><input type="text" name="store_name" value="<?php echo esc_attr( $store['store_name'] ); ?>" class="regular-text" required /></td></tr>
@@ -143,6 +148,7 @@ class RPS_Admin_Pages {
             <?php else : ?>
                 <h2>Add store</h2>
                 <form method="post" action="<?php echo esc_url( $page_url ); ?>">
+                    <?php wp_nonce_field( 'rps_stores_action' ); ?>
                     <table class="form-table"><tbody>
                         <tr><th>Store URL <span class="description">(required)</span></th><td><input type="url" name="url" class="regular-text" required /></td></tr>
                         <tr><th>Store Name <span class="description">(required)</span></th><td><input type="text" name="store_name" class="regular-text" required /></td></tr>
@@ -161,8 +167,9 @@ class RPS_Admin_Pages {
                     foreach ( $stores as $url => $d ) {
                         $icon = $d['status'] ? '<span class="dashicons dashicons-yes"></span>' : '<span class="dashicons dashicons-no"></span>';
                         echo "<tr><td>".esc_html($url)."</td><td>{$icon}</td><td>".esc_html($d['acf_opt_value'])."</td>";
+                        $delete_url = wp_nonce_url( $page_url . '&delete=' . rawurlencode($url), 'rps_delete_store' );
                         echo '<td><a href="'.esc_url($page_url).'&edit='.rawurlencode($url).'"><span class="dashicons dashicons-edit"></span></a> ';
-                        echo '<a href="'.esc_url($page_url).'&delete='.rawurlencode($url).'"><span class="dashicons dashicons-trash"></span></a></td></tr>';
+                        echo '<a href="'.esc_url($delete_url).'" onclick="return confirm(\'Eliminare questo store?\')"><span class="dashicons dashicons-trash"></span></a></td></tr>';
                     }
                 } else {
                     echo '<tr><td colspan="4">No stores found.</td></tr>';
@@ -321,6 +328,7 @@ class RPS_Admin_Pages {
     // ──── SETTINGS PAGE ────
     public function settings_page() {
         if ( isset( $_POST['submit'] ) ) {
+            check_admin_referer( 'rps_settings_action' );
             $fields = array( 'wc_api_mps_sync_type', 'wc_api_mps_authorization', 'wc_api_mps_old_products_sync_by', 'wc_api_mps_product_sync_type' );
             foreach ( $fields as $f ) { if ( isset( $_POST[$f] ) ) update_option( $f, sanitize_text_field( $_POST[$f] ) ); }
             $ints = array( 'wc_api_mps_stock_sync', 'wc_api_mps_product_delete', 'wc_api_mps_uninstall' );
@@ -337,7 +345,7 @@ class RPS_Admin_Pages {
         $uninst = get_option( 'wc_api_mps_uninstall' );
         ?>
         <div class="wrap"><h1>Settings</h1><hr>
-            <form method="post"><table class="form-table"><tbody>
+            <form method="post"><?php wp_nonce_field( 'rps_settings_action' ); ?><table class="form-table"><tbody>
                 <tr><th>Sync Type</th><td><fieldset><label><input type="radio" name="wc_api_mps_sync_type" value="auto"<?php echo $sync_type=='auto'?' checked':''; ?> /> Auto Sync</label><br><label><input type="radio" name="wc_api_mps_sync_type" value="manual"<?php echo $sync_type=='manual'?' checked':''; ?> /> Manual Sync</label></fieldset></td></tr>
                 <tr><th>Authorization</th><td><fieldset><label><input type="radio" name="wc_api_mps_authorization" value="header"<?php echo $auth=='header'?' checked':''; ?> /> Header</label><br><label><input type="radio" name="wc_api_mps_authorization" value="query"<?php echo $auth=='query'?' checked':''; ?> /> Query String</label></fieldset></td></tr>
                 <tr><th>Old Products Sync By</th><td><fieldset><label><input type="radio" name="wc_api_mps_old_products_sync_by" value="slug"<?php echo $sync_by=='slug'?' checked':''; ?> /> Slug</label><br><label><input type="radio" name="wc_api_mps_old_products_sync_by" value="sku"<?php echo $sync_by=='sku'?' checked':''; ?> /> SKU</label></fieldset></td></tr>
