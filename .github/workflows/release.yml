@@ -34,7 +34,7 @@ jobs:
           zip -r "dist/$ZIP_NAME" . -x "*.git*" "*.github*" "dist/*" "*.log"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
