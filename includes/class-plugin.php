@@ -161,6 +161,8 @@ class RPS_Plugin {
         $sync_type = get_option( 'wc_api_mps_sync_type' );
         if ( $sync_type == 'auto' && is_admin() ) {
             $order = wc_get_order( $order_id );
+            if ( ! $order ) return;
+
             $items = $order->get_items();
             $product_ids = array();
             foreach ( $items as $item ) {
@@ -206,6 +208,7 @@ class RPS_Plugin {
         $order_id = ( isset( $_POST['order_id'] ) ? (int) $_POST['order_id'] : 0 );
         if ( $order_id ) {
             $order = wc_get_order( $order_id );
+            if ( ! $order ) { wp_die(); return; }
             $items = $order->get_items();
             $product_ids = array();
             foreach ( $items as $item ) {

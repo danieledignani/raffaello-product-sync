@@ -47,8 +47,9 @@ class RPS_Product_Sync {
         $slug = $product_info_data['slug'];
         $sku  = $product_info_data['sku'];
 
-        // Raccogli dati prodotto
-        $data = self::collect_product_data( $product_info, $product_info_data, $product_id );
+        // Raccogli dati prodotto + dati extra (images, variations) che servono per il mapping
+        $extra = array();
+        $data = self::collect_product_data( $product_info, $product_info_data, $product_id, $extra );
 
         $wc_api_mps = get_post_meta( $product_id, 'mpsrel', true );
         if ( ! is_array( $wc_api_mps ) ) $wc_api_mps = array();
@@ -135,16 +136,17 @@ class RPS_Product_Sync {
                 $data['attributes'] = $attrs;
             }
 
-            // Map images
-            if ( ! empty( $data['images'] ) ) {
-                $data['images'] = RPS_Image_Sync::map_product_images( $api, $store_url, $product_info_data['images'] );
+            // Map images (usa extra['images'] con id/src/position, non $product_info_data)
+            if ( ! empty( $data['images'] ) && ! empty( $extra['images'] ) ) {
+                $data['images'] = RPS_Image_Sync::map_product_images( $api, $store_url, $extra['images'] );
             }
 
             // Map upsell/cross-sell/grouped
             foreach ( array( 'upsell_ids', 'cross_sell_ids', 'grouped_products' ) as $rel_field ) {
                 if ( ! empty( $data[ $rel_field ] ) ) {
+                    $source = isset( $extra[ $rel_field ] ) ? $extra[ $rel_field ] : ( isset( $product_info_data[ $rel_field ] ) ? $product_info_data[ $rel_field ] : array() );
                     $mapped = array();
-                    foreach ( $product_info_data[ $rel_field ] as $rel_id ) {
+                    foreach ( $source as $rel_id ) {
                         $rel_mps = get_post_meta( $rel_id, 'mpsrel', true );
                         if ( is_array( $rel_mps ) && isset( $rel_mps[ $store_url ] ) ) {
                             $mapped[] = $rel_mps[ $store_url ];
@@ -175,14 +177,14 @@ class RPS_Product_Sync {
             // Save image mapping
             if ( isset( $product->id ) ) {
                 $dest_product_id = $product->id;
-                RPS_Image_Sync::save_image_mapping( $store_url, isset( $product_info_data['images'] ) ? $product_info_data['images'] : null, $product );
+                RPS_Image_Sync::save_image_mapping( $store_url, ! empty( $extra['images'] ) ? $extra['images'] : null, $product );
             }
 
             // Sync variations
             if ( $dest_product_id ) {
                 $wc_api_mps[ $store_url ] = $dest_product_id;
-                if ( isset( $product_info_data['variations'] ) ) {
-                    RPS_Variation_Sync::sync( $api, $store_url, $product_info_data['variations'], $dest_product_id, $store_config );
+                if ( ! empty( $extra['variations'] ) ) {
+                    RPS_Variation_Sync::sync( $api, $store_url, $extra['variations'], $dest_product_id, $store_config );
                 }
             }
         }
@@ -315,7 +317,7 @@ class RPS_Product_Sync {
 
     // ── Helper privati ──
 
-    private static function collect_product_data( $product_info, $pid, $product_id ) {
+    private static function collect_product_data( $product_info, $pid, $product_id, &$extra = array() ) {
         $data = array();
         $simple_fields = array( 'name', 'slug', 'status', 'featured', 'global_unique_id',
             'catalog_visibility', 'description', 'short_description', 'sku',
@@ -327,8 +329,10 @@ class RPS_Product_Sync {
             if ( isset( $pid[ $f ] ) ) $data[ $f ] = $pid[ $f ];
         }
 
-        if ( isset( $pid['date_created'] ) ) {
-            $data['date_created'] = date( 'Y-m-d H:i:s', strtotime( $pid['date_created'] ) );
+        if ( isset( $pid['date_created'] ) && $pid['date_created'] ) {
+            $data['date_created'] = $pid['date_created'] instanceof \WC_DateTime
+                ? $pid['date_created']->date( 'Y-m-d H:i:s' )
+                : date( 'Y-m-d H:i:s', strtotime( (string) $pid['date_created'] ) );
         }
         $data['type'] = $product_info->get_type();
         $data['shipping_class'] = $product_info->get_shipping_class();
@@ -375,20 +379,21 @@ class RPS_Product_Sync {
             $data['default_attributes'] = $defaults;
         }
 
-        // Images
+        // Images - salva in $extra per il mapping nello store loop
         if ( isset( $pid['image_id'] ) && $pid['image_id'] ) {
             $data['images'][] = array( 'id' => $pid['image_id'], 'src' => wp_get_attachment_url( $pid['image_id'] ), 'position' => 0 );
-            $pid['images'] = $data['images'];
         }
         if ( ! empty( $pid['gallery_image_ids'] ) ) {
-            $pos = 1;
+            $pos = isset( $data['images'] ) ? count( $data['images'] ) : 1;
             foreach ( $pid['gallery_image_ids'] as $gid ) {
                 $data['images'][] = array( 'id' => $gid, 'src' => wp_get_attachment_url( $gid ), 'position' => $pos++ );
             }
-            $pid['images'] = $data['images'];
+        }
+        if ( ! empty( $data['images'] ) ) {
+            $extra['images'] = $data['images'];
         }
 
-        // Variations
+        // Variations - salva in $extra per il sync nello store loop
         if ( $data['type'] == 'variable' ) {
             $children = $product_info->get_children();
             if ( $children ) {
@@ -397,16 +402,22 @@ class RPS_Product_Sync {
                     $v = wc_get_product( $child_id );
                     if ( $v ) $avail[] = $v;
                 }
-                $pid['variations'] = $avail;
+                $extra['variations'] = $avail;
             }
         }
 
-        // Related products
-        if ( isset( $pid['upsell_ids'] ) ) $data['upsell_ids'] = $pid['upsell_ids'];
-        if ( isset( $pid['cross_sell_ids'] ) ) $data['cross_sell_ids'] = $pid['cross_sell_ids'];
+        // Related products - salva in $extra per il mapping
+        if ( isset( $pid['upsell_ids'] ) ) {
+            $data['upsell_ids'] = $pid['upsell_ids'];
+            $extra['upsell_ids'] = $pid['upsell_ids'];
+        }
+        if ( isset( $pid['cross_sell_ids'] ) ) {
+            $data['cross_sell_ids'] = $pid['cross_sell_ids'];
+            $extra['cross_sell_ids'] = $pid['cross_sell_ids'];
+        }
         if ( isset( $pid['children'] ) ) {
             $data['grouped_products'] = $pid['children'];
-            $pid['grouped_products'] = $pid['children'];
+            $extra['grouped_products'] = $pid['children'];
         }
 
         // Meta fields

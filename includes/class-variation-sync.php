@@ -239,7 +239,7 @@ class RPS_Variation_Sync {
     }
 
     private static function apply_meta_exclusions( &$data, $store_config ) {
-        $exclude = $store_config['exclude_meta_data'];
+        $exclude = isset( $store_config['exclude_meta_data'] ) ? $store_config['exclude_meta_data'] : '';
         if ( ! $exclude ) return;
         $exclude = array_map( 'trim', explode( ',', $exclude ) );
         if ( isset( $data['meta_data'] ) ) {

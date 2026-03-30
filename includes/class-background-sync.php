@@ -38,9 +38,6 @@ class RPS_Background_Sync {
         foreach ( $store_urls as $url ) {
             if ( isset( $all_stores[ $url ] ) ) {
                 $selected_stores[ $url ] = $all_stores[ $url ];
-
-                // Aggiungi sites_to_synch per ogni prodotto
-                wc_api_mps_add_site_to_synch( 0, $all_stores[ $url ]['acf_opt_value'] );
             }
         }
 
@@ -94,22 +91,33 @@ class RPS_Background_Sync {
             if ( isset( $all_stores[ $url ] ) ) $selected[ $url ] = $all_stores[ $url ];
         }
 
+        $success = false;
         try {
             RPS_Product_Sync::sync( $product_id, $selected, '', true );
-            $batch_data['completed']++;
+            $success = true;
         } catch ( \Exception $e ) {
-            $batch_data['failed']++;
-            $batch_data['errors'][] = "Product {$product_id}: " . $e->getMessage();
             RPS_Logger::instance()->error( 'batch_sync', "Errore sync prodotto {$product_id}: " . $e->getMessage(), array( 'product_id' => $product_id ) );
         }
 
-        // Controlla se il batch è completato
+        // Incremento atomico per evitare race condition con worker concorrenti
+        global $wpdb;
+        $option_name = $this->batch_option_prefix . $batch_id;
+        // Rileggi il batch data fresco dal DB (un altro worker potrebbe averlo aggiornato)
+        $batch_data = get_option( $option_name );
+        if ( ! $batch_data ) return;
+
+        if ( $success ) {
+            $batch_data['completed']++;
+        } else {
+            $batch_data['failed']++;
+        }
+
         if ( ( $batch_data['completed'] + $batch_data['failed'] ) >= $batch_data['total'] ) {
             $batch_data['status'] = 'completed';
             RPS_Logger::instance()->info( 'batch_complete', "Batch {$batch_id} completato: {$batch_data['completed']} ok, {$batch_data['failed']} errori" );
         }
 
-        update_option( $this->batch_option_prefix . $batch_id, $batch_data, false );
+        update_option( $option_name, $batch_data, false );
     }
 
     public function ajax_batch_status() {
@@ -135,10 +143,9 @@ class RPS_Background_Sync {
             $data['status'] = 'cancelled';
             update_option( $this->batch_option_prefix . $batch_id, $data, false );
 
-            // Cancella azioni pendenti
-            if ( function_exists( 'as_unschedule_all_actions' ) ) {
-                as_unschedule_all_actions( 'rps_sync_single_product', null, 'rps-bulk-sync' );
-            }
+            // Le azioni pendenti di questo batch verranno skippate al check
+            // 'status === cancelled' in process_single_product().
+            // Non cancelliamo con as_unschedule_all_actions perché cancellerebbe anche altri batch.
 
             RPS_Logger::instance()->info( 'batch_cancel', "Batch {$batch_id} annullato" );
         }
