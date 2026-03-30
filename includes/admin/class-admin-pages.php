@@ -221,7 +221,7 @@ class RPS_Admin_Pages {
             <!-- Force Sync: sincronizza tutti i prodotti flaggati per uno store -->
             <div style="background:#fff;border:1px solid #ccd0d4;padding:15px 20px;margin-bottom:20px;border-radius:4px;">
                 <h3 style="margin-top:0;">Force Sync per Store</h3>
-                <p class="description">Sincronizza tutti i prodotti flaggati per uno store specifico o per tutti gli store configurati.</p>
+                <p class="description">Sincronizza i prodotti flaggati per uno store specifico o per tutti gli store configurati.</p>
                 <table class="form-table" style="margin:0;"><tbody>
                     <tr>
                         <th style="width:150px;">Store</th>
@@ -235,6 +235,18 @@ class RPS_Admin_Pages {
                                     }
                                 } ?>
                             </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Modalità</th>
+                        <td>
+                            <label><input type="radio" name="rps_force_mode" value="missing" checked /> Solo non sincronizzati (senza ID remoto per lo store)</label><br>
+                            <label><input type="radio" name="rps_force_mode" value="all" /> Tutti (ri-sincronizza anche quelli già fatti)</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Prodotti</th>
+                        <td>
                             <button type="button" class="button" id="rps-force-sync-count-btn">Conta prodotti</button>
                             <span id="rps-force-sync-count" style="margin-left:8px;font-weight:bold;"></span>
                         </td>
@@ -246,26 +258,34 @@ class RPS_Admin_Pages {
             <h3>Sync Manuale per Selezione</h3>
 
             <!-- Filtri -->
-            <form method="post">
-                <table class="form-table"><tbody>
-                    <tr><th>Search products</th><td><input type="text" name="s" value="<?php echo esc_attr( $s ); ?>" /></td></tr>
-                    <tr><th>Categories</th><td><?php wp_dropdown_categories( array( 'show_option_none' => 'Select a category', 'option_none_value' => 0, 'orderby' => 'name', 'show_count' => 1, 'hierarchical' => 1, 'name' => 'product_cat', 'selected' => $product_cat, 'taxonomy' => 'product_cat' ) ); ?></td></tr>
-                    <tr><th>Brands</th><td><?php wp_dropdown_categories( array( 'show_option_none' => 'Select a brand', 'option_none_value' => 0, 'orderby' => 'name', 'show_count' => 1, 'hierarchical' => 1, 'name' => 'product_brand', 'selected' => $product_brand, 'taxonomy' => 'product_brand' ) ); ?></td></tr>
-                    <tr><th>Tags</th><td><?php wp_dropdown_categories( array( 'show_option_none' => 'Select a tag', 'option_none_value' => 0, 'orderby' => 'name', 'show_count' => 1, 'hierarchical' => 1, 'name' => 'product_tag', 'selected' => $product_tag, 'taxonomy' => 'product_tag' ) ); ?></td></tr>
-                    <tr><th>Product Per Page</th><td><select name="wc_api_mps_record_per_page"><?php foreach ( array(5,10,25,50) as $n ) { $sel = $record_per_page == $n ? ' selected' : ''; echo "<option value=\"{$n}\"{$sel}>{$n}</option>"; } ?></select></td></tr>
-                    <tr><th>Status</th><td>
-                        <?php if ( $stores ) : ?><select name="wc_api_mps_store"><option value="">All Stores</option><?php foreach ( $stores as $su => $sd ) { if ( $sd['status'] ) { $sel = $store_filter == $su ? ' selected' : ''; echo '<option value="'.esc_url($su).'"'.$sel.'>'.esc_url($su).'</option>'; } } ?></select><br><br><?php endif; ?>
-                        <fieldset><?php foreach ( array( '' => 'All', 'synced' => 'Synced', 'not-synced' => 'Not Synced' ) as $v => $l ) { $chk = $status == $v ? ' checked' : ''; echo "<label><input type=\"radio\" name=\"wc_api_mps_status\" value=\"{$v}\"{$chk}> {$l}</label>&nbsp;&nbsp;"; } ?></fieldset>
-                    </td></tr>
-                </tbody></table>
-                <p class="submit"><input name="filter" class="button button-secondary" value="Filter" type="submit">&nbsp;&nbsp;<a class="button button-secondary" href="<?php echo esc_url( $page_url ); ?>">Clear</a></p>
-            </form>
+            <div style="background:#fff;border:1px solid #ccd0d4;padding:15px 20px;margin-bottom:15px;border-radius:4px;">
+                <form method="post" style="display:flex;flex-wrap:wrap;gap:15px;align-items:end;">
+                    <div><label style="display:block;font-weight:600;margin-bottom:4px;">Cerca</label><input type="text" name="s" value="<?php echo esc_attr( $s ); ?>" placeholder="Nome prodotto..." /></div>
+                    <div><label style="display:block;font-weight:600;margin-bottom:4px;">Categoria</label><?php wp_dropdown_categories( array( 'show_option_none' => 'Tutte', 'option_none_value' => 0, 'orderby' => 'name', 'show_count' => 1, 'hierarchical' => 1, 'name' => 'product_cat', 'selected' => $product_cat, 'taxonomy' => 'product_cat' ) ); ?></div>
+                    <div><label style="display:block;font-weight:600;margin-bottom:4px;">Brand</label><?php wp_dropdown_categories( array( 'show_option_none' => 'Tutti', 'option_none_value' => 0, 'orderby' => 'name', 'show_count' => 1, 'hierarchical' => 1, 'name' => 'product_brand', 'selected' => $product_brand, 'taxonomy' => 'product_brand' ) ); ?></div>
+                    <div><label style="display:block;font-weight:600;margin-bottom:4px;">Tag</label><?php wp_dropdown_categories( array( 'show_option_none' => 'Tutti', 'option_none_value' => 0, 'orderby' => 'name', 'show_count' => 1, 'hierarchical' => 1, 'name' => 'product_tag', 'selected' => $product_tag, 'taxonomy' => 'product_tag' ) ); ?></div>
+                    <div><label style="display:block;font-weight:600;margin-bottom:4px;">Per pagina</label><select name="wc_api_mps_record_per_page"><?php foreach ( array(5,10,25,50,100) as $n ) { $sel = $record_per_page == $n ? ' selected' : ''; echo "<option value=\"{$n}\"{$sel}>{$n}</option>"; } ?></select></div>
+                    <div><label style="display:block;font-weight:600;margin-bottom:4px;">Stato sync</label>
+                        <?php if ( $stores ) : ?><select name="wc_api_mps_store"><option value="">Tutti gli store</option><?php foreach ( $stores as $su => $sd ) { if ( $sd['status'] ) { $sel = $store_filter == $su ? ' selected' : ''; echo '<option value="'.esc_url($su).'"'.$sel.'>'.esc_url($su).'</option>'; } } ?></select><?php endif; ?>
+                    </div>
+                    <div>
+                        <fieldset style="display:flex;gap:10px;"><?php foreach ( array( '' => 'Tutti', 'synced' => 'Sincronizzati', 'not-synced' => 'Non sincronizzati' ) as $v => $l ) { $chk = $status == $v ? ' checked' : ''; echo "<label><input type=\"radio\" name=\"wc_api_mps_status\" value=\"{$v}\"{$chk}> {$l}</label>"; } ?></fieldset>
+                    </div>
+                    <div><input name="filter" class="button button-secondary" value="Filtra" type="submit"> <a class="button" href="<?php echo esc_url( $page_url ); ?>">Reset</a></div>
+                </form>
+            </div>
 
             <!-- Prodotti + Sync -->
             <form method="post">
                 <?php wp_nonce_field( 'rps_bulk_sync_action' ); ?>
                 <table class="wp-list-table widefat fixed striped">
-                    <thead><tr><td class="manage-column column-cb check-column"><input type="checkbox"></td><th>Product</th></tr></thead>
+                    <thead><tr>
+                        <td class="manage-column column-cb check-column"><input type="checkbox"></td>
+                        <th style="width:40%">Prodotto</th>
+                        <th style="width:15%">SKU</th>
+                        <th style="width:10%">Stato</th>
+                        <th>Store sincronizzati</th>
+                    </tr></thead>
                     <tbody>
                     <?php
                     $paged = isset( $_REQUEST['paged'] ) ? (int) $_REQUEST['paged'] : 1;
@@ -285,17 +305,41 @@ class RPS_Admin_Pages {
                         $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => 'a:0:{}', 'compare' => '=' );
                     }
 
+                    // Salva i parametri filtro per "sync tutti i filtrati"
+                    $filter_args_for_all = $args;
+                    $filter_args_for_all['posts_per_page'] = -1;
+                    $filter_args_for_all['fields'] = 'ids';
+                    unset( $filter_args_for_all['paged'] );
+
                     $records = new WP_Query( $args );
+                    $total_found = $records->found_posts;
                     if ( $records->have_posts() ) {
                         while ( $records->have_posts() ) { $records->the_post(); $rid = get_the_ID();
-                            echo '<tr><th class="check-column"><input type="checkbox" name="records[]" value="'.$rid.'"></th>';
-                            echo '<td><strong><a href="'.esc_url(get_edit_post_link($rid)).'">'.esc_html(get_the_title()).'</a></strong>';
+                            $product = wc_get_product( $rid );
+                            $sku = $product ? $product->get_sku() : '';
+                            $pstatus = $product ? $product->get_status() : '';
                             $mps = get_post_meta( $rid, 'mpsrel', true );
-                            if ( $mps ) echo '<p><strong>Synced:</strong> '.implode(', ', array_keys($mps)).'</p>';
-                            echo '</td></tr>';
+                            $synced_stores = '';
+                            if ( is_array( $mps ) && ! empty( $mps ) ) {
+                                $store_names = array();
+                                foreach ( $mps as $surl => $sid ) {
+                                    $sname = isset( $stores[ $surl ]['store_abbreviation'] ) && $stores[ $surl ]['store_abbreviation'] ? $stores[ $surl ]['store_abbreviation'] : ( isset( $stores[ $surl ]['store_name'] ) ? $stores[ $surl ]['store_name'] : $surl );
+                                    $store_names[] = '<span style="background:#e7f5e7;padding:2px 6px;border-radius:3px;font-size:11px;">' . esc_html( $sname ) . '</span>';
+                                }
+                                $synced_stores = implode( ' ', $store_names );
+                            } else {
+                                $synced_stores = '<span style="color:#999;">—</span>';
+                            }
+                            echo '<tr>';
+                            echo '<th class="check-column"><input type="checkbox" name="records[]" value="'.$rid.'"></th>';
+                            echo '<td><strong><a href="'.esc_url(get_edit_post_link($rid)).'">'.esc_html(get_the_title()).'</a></strong></td>';
+                            echo '<td><code>'.esc_html( $sku ?: '—' ).'</code></td>';
+                            echo '<td>'.esc_html( $pstatus ).'</td>';
+                            echo '<td>'.$synced_stores.'</td>';
+                            echo '</tr>';
                         }
                     } else {
-                        echo '<tr class="no-items"><td colspan="2">No products found.</td></tr>';
+                        echo '<tr class="no-items"><td colspan="5">Nessun prodotto trovato.</td></tr>';
                     }
                     ?>
                     </tbody>
@@ -307,24 +351,33 @@ class RPS_Admin_Pages {
                     if ( $product_cat ) $add_args['product_cat'] = $product_cat;
                     if ( $product_brand ) $add_args['product_brand'] = $product_brand;
                     if ( $product_tag ) $add_args['product_tag'] = $product_tag;
+                    if ( $status ) $add_args['wc_api_mps_status'] = $status;
+                    if ( $store_filter ) $add_args['wc_api_mps_store'] = $store_filter;
                     echo '<div class="tablenav"><div class="tablenav-pages">';
-                    echo paginate_links( array( 'base' => str_replace( 999999999, '%#%', admin_url('/admin.php?page=wc_api_mps_bulk_sync&paged=%#%') ), 'format' => '?paged=%#%', 'current' => max(1,$paged), 'total' => $records->max_num_pages, 'add_args' => $add_args ) );
+                    echo paginate_links( array( 'base' => admin_url('/admin.php?page=wc_api_mps_bulk_sync&paged=%#%'), 'format' => '', 'current' => max(1,$paged), 'total' => $records->max_num_pages, 'add_args' => $add_args ) );
                     echo '</div></div>';
                 }
                 wp_reset_postdata();
                 ?>
-                <table class="form-table"><tbody><tr><th>Destination Sites</th><td>
-                    <label><input class="rps-check-all" type="checkbox" /> All</label><br><br>
-                    <fieldset class="rps-sites"><?php
-                        if ( $stores ) foreach ( $stores as $su => $sd ) {
-                            if ( $sd['status'] ) echo '<p><label><input type="checkbox" name="stores[]" value="'.esc_url($su).'" /> '.esc_url($su).'</label></p>';
-                        }
-                    ?></fieldset>
-                </td></tr></tbody></table>
-                <p class="submit">
-                    <input type="hidden" name="wc_api_mps_record_per_page" value="<?php echo $record_per_page; ?>" />
-                    <input name="rps_bulk_sync_bg" class="button button-primary" value="Sync in Background" type="submit">
-                </p>
+                <div style="background:#fff;border:1px solid #ccd0d4;padding:15px 20px;margin-top:15px;border-radius:4px;">
+                    <h4 style="margin-top:0;">Destination Sites</h4>
+                    <label><input class="rps-check-all" type="checkbox" /> Seleziona tutti</label>
+                    <fieldset class="rps-sites" style="margin-top:8px;column-count:2;">
+                        <?php if ( $stores ) foreach ( $stores as $su => $sd ) {
+                            if ( $sd['status'] ) {
+                                $sname = ! empty( $sd['store_name'] ) ? $sd['store_name'] . ' (' . $su . ')' : $su;
+                                echo '<p style="margin:4px 0;"><label><input type="checkbox" name="stores[]" value="'.esc_url($su).'" /> '.esc_html($sname).'</label></p>';
+                            }
+                        } ?>
+                    </fieldset>
+                    <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
+                        <input type="hidden" name="wc_api_mps_record_per_page" value="<?php echo $record_per_page; ?>" />
+                        <input name="rps_bulk_sync_bg" class="button button-primary" value="Sync selezionati in Background" type="submit">
+                        <?php if ( $total_found > 0 ) : ?>
+                            <button type="button" class="button" id="rps-sync-all-filtered" data-total="<?php echo $total_found; ?>">Sync tutti i <?php echo $total_found; ?> filtrati</button>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </form>
         </div>
         <?php
@@ -390,6 +443,24 @@ class RPS_Admin_Pages {
             </tbody></table>
             <p class="submit"><input type="submit" name="submit" class="button button-primary" value="Save Changes"></p>
             </form>
+
+            <hr style="margin:30px 0;">
+            <h2>Migrazione URL Store</h2>
+            <p class="description">Dopo una migrazione del sito (es. da produzione a sviluppo), usa questo tool per aggiornare tutti i riferimenti URL dello store nelle tabelle del plugin (wp_options, wp_postmeta, wp_termmeta, log).</p>
+            <table class="form-table"><tbody>
+                <tr>
+                    <th>URL Vecchio</th>
+                    <td><input type="url" id="rps-migrate-old-url" class="regular-text" placeholder="https://ilmulinoavento.it" /></td>
+                </tr>
+                <tr>
+                    <th>URL Nuovo</th>
+                    <td><input type="url" id="rps-migrate-new-url" class="regular-text" placeholder="https://dev.ilmulinoavento.it" /></td>
+                </tr>
+            </tbody></table>
+            <p>
+                <button type="button" class="button button-primary" id="rps-migrate-btn">Esegui Migrazione</button>
+                <span id="rps-migrate-result" style="margin-left:12px;"></span>
+            </p>
         </div>
         <?php
     }

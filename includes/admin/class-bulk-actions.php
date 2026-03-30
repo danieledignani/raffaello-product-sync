@@ -29,11 +29,12 @@ class RPS_Bulk_Actions {
     }
 
     public function handle_bulk_actions( $redirect_to, $doaction, $post_ids ) {
-        // Force sync
+        // Force sync (in background via Action Scheduler)
         if ( $doaction === 'synch_products' ) {
-            $stores = get_option( 'wc_api_mps_stores' );
-            foreach ( $post_ids as $pid ) {
-                RPS_Product_Sync::sync( $pid, $stores );
+            $stores = get_option( 'wc_api_mps_stores', array() );
+            $store_urls = array_keys( array_filter( $stores, function( $s ) { return ! empty( $s['status'] ); } ) );
+            if ( ! empty( $store_urls ) ) {
+                RPS_Background_Sync::instance()->create_batch( $post_ids, $store_urls );
             }
             return add_query_arg( 'synched_products', count( $post_ids ), $redirect_to );
         }
@@ -84,7 +85,7 @@ class RPS_Bulk_Actions {
     public function admin_notices() {
         if ( ! empty( $_REQUEST['synched_products'] ) ) {
             $c = intval( $_REQUEST['synched_products'] );
-            echo "<div class='updated fade'><p>Sincronizzati {$c} prodotti.</p></div>";
+            echo "<div class='updated fade'><p>Sync avviato in background per {$c} prodotti. <a href='" . admin_url('admin.php?page=wc_api_mps_bulk_sync') . "'>Vedi progresso</a></p></div>";
         }
         if ( ! empty( $_REQUEST['synch_data_delete_in_products'] ) ) {
             $c = intval( $_REQUEST['synch_data_delete_in_products'] );

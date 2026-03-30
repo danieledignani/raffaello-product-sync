@@ -180,11 +180,13 @@
     // ── Force Sync ──
     $('#rps-force-sync-count-btn').on('click', function() {
         var store = $('#rps-force-sync-store').val();
+        var mode = $('input[name="rps_force_mode"]:checked').val();
         $(this).prop('disabled', true).text('Conteggio...');
         $.post(rps_ajax.ajax_url, {
             action: 'rps_force_sync_count',
             nonce: rps_ajax.nonce,
-            store_url: store
+            store_url: store,
+            mode: mode
         }, function(resp) {
             $('#rps-force-sync-count-btn').prop('disabled', false).text('Conta prodotti');
             if (resp.success) {
@@ -196,13 +198,16 @@
     });
 
     $('#rps-force-sync-start').on('click', function() {
-        if (!confirm('Avviare il sync di tutti i prodotti flaggati?')) return;
+        var mode = $('input[name="rps_force_mode"]:checked').val();
+        var modeLabel = mode === 'all' ? 'TUTTI i prodotti (anche già sincronizzati)' : 'solo i prodotti non ancora sincronizzati';
+        if (!confirm('Avviare il sync di ' + modeLabel + '?')) return;
         var store = $('#rps-force-sync-store').val();
         $(this).prop('disabled', true);
         $.post(rps_ajax.ajax_url, {
             action: 'rps_force_sync_start',
             nonce: rps_ajax.nonce,
-            store_url: store
+            store_url: store,
+            mode: mode
         }, function(resp) {
             if (resp.success) {
                 pollBatch(resp.data.batch_id);
@@ -213,10 +218,78 @@
         });
     });
 
-    // Reset count when store changes
-    $('#rps-force-sync-store').on('change', function() {
-        $('#rps-force-sync-count').text('-');
+    // Reset count when store or mode changes
+    $('#rps-force-sync-store, input[name="rps_force_mode"]').on('change', function() {
+        $('#rps-force-sync-count').text('');
         $('#rps-force-sync-start').prop('disabled', true);
+    });
+
+    // ── Sync All Filtered ──
+    $('#rps-sync-all-filtered').on('click', function() {
+        var total = $(this).data('total');
+        var stores = [];
+        $('.rps-sites input[type="checkbox"]:checked').each(function() { stores.push($(this).val()); });
+        if (!stores.length) {
+            alert('Seleziona almeno uno store di destinazione');
+            return;
+        }
+        if (!confirm('Avviare il sync in background di tutti i ' + total + ' prodotti filtrati verso ' + stores.length + ' store?')) return;
+
+        // Raccogli i parametri filtro dal form
+        var filterForm = $(this).closest('form').prev().find('form');
+        $(this).prop('disabled', true);
+
+        $.post(rps_ajax.ajax_url, {
+            action: 'rps_sync_all_filtered',
+            nonce: rps_ajax.nonce,
+            stores: stores,
+            s: $('input[name="s"]').val() || '',
+            product_cat: $('select[name="product_cat"]').val() || 0,
+            product_brand: $('select[name="product_brand"]').val() || 0,
+            product_tag: $('select[name="product_tag"]').val() || 0,
+            sync_status: $('input[name="wc_api_mps_status"]:checked').val() || '',
+            store_filter: $('select[name="wc_api_mps_store"]').val() || ''
+        }, function(resp) {
+            if (resp.success) {
+                pollBatch(resp.data.batch_id);
+            } else {
+                alert(resp.data || 'Errore');
+                $('#rps-sync-all-filtered').prop('disabled', false);
+            }
+        });
+    });
+
+    // ── URL Migration ──
+    $('#rps-migrate-btn').on('click', function() {
+        var oldUrl = $('#rps-migrate-old-url').val().replace(/\/+$/, '');
+        var newUrl = $('#rps-migrate-new-url').val().replace(/\/+$/, '');
+        if (!oldUrl || !newUrl) {
+            alert('Inserisci entrambi gli URL');
+            return;
+        }
+        if (oldUrl === newUrl) {
+            alert('Gli URL sono identici');
+            return;
+        }
+        if (!confirm('Attenzione: questa operazione modificherà i dati in wp_options, wp_postmeta e wp_termmeta.\n\nMigrare da:\n' + oldUrl + '\na:\n' + newUrl + '\n\nContinuare?')) return;
+
+        $(this).prop('disabled', true).text('Migrazione in corso...');
+        $.post(rps_ajax.ajax_url, {
+            action: 'rps_migrate_urls',
+            nonce: rps_ajax.nonce,
+            old_url: oldUrl,
+            new_url: newUrl
+        }, function(resp) {
+            $('#rps-migrate-btn').prop('disabled', false).text('Esegui Migrazione');
+            if (resp.success) {
+                var html = '<div class="notice notice-success inline" style="padding:8px 12px;"><strong>Migrazione completata:</strong><ul style="margin:5px 0 0 20px;">';
+                resp.data.changes.forEach(function(c) { html += '<li>' + c + '</li>'; });
+                html += '</ul></div>';
+                $('#rps-migrate-result').html(html);
+            } else {
+                $('#rps-migrate-result').html('<span style="color:#dc3232;">' + (resp.data || 'Errore') + '</span>');
+            }
+        });
     });
 
 })(jQuery);

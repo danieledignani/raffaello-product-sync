@@ -60,6 +60,10 @@ class RPS_Plugin {
         // Force sync AJAX
         add_action( 'wp_ajax_rps_force_sync_count', array( $this, 'ajax_force_sync_count' ) );
         add_action( 'wp_ajax_rps_force_sync_start', array( $this, 'ajax_force_sync_start' ) );
+        add_action( 'wp_ajax_rps_sync_all_filtered', array( $this, 'ajax_sync_all_filtered' ) );
+
+        // URL migration AJAX
+        add_action( 'wp_ajax_rps_migrate_urls', array( $this, 'ajax_migrate_urls' ) );
 
         // Enqueue admin assets
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
@@ -209,7 +213,8 @@ class RPS_Plugin {
         if ( ! current_user_can( 'manage_options' ) ) wp_die();
 
         $store_url = isset( $_POST['store_url'] ) ? sanitize_text_field( $_POST['store_url'] ) : '';
-        $product_ids = self::get_flagged_product_ids( $store_url );
+        $mode = isset( $_POST['mode'] ) ? sanitize_text_field( $_POST['mode'] ) : 'all';
+        $product_ids = self::get_flagged_product_ids( $store_url, $mode );
         wp_send_json_success( array( 'count' => count( $product_ids ) ) );
     }
 
@@ -218,7 +223,8 @@ class RPS_Plugin {
         if ( ! current_user_can( 'manage_options' ) ) wp_die();
 
         $store_url = isset( $_POST['store_url'] ) ? sanitize_text_field( $_POST['store_url'] ) : '';
-        $product_ids = self::get_flagged_product_ids( $store_url );
+        $mode = isset( $_POST['mode'] ) ? sanitize_text_field( $_POST['mode'] ) : 'all';
+        $product_ids = self::get_flagged_product_ids( $store_url, $mode );
 
         if ( empty( $product_ids ) ) {
             wp_send_json_error( 'Nessun prodotto trovato' );
@@ -237,37 +243,88 @@ class RPS_Plugin {
         wp_send_json_success( array( 'batch_id' => $batch_id, 'count' => count( $product_ids ) ) );
     }
 
-    /**
-     * Trova tutti i product ID flaggati per un dato store (o per qualsiasi store).
-     */
-    private static function get_flagged_product_ids( $store_url ) {
-        $stores = get_option( 'wc_api_mps_stores', array() );
+    public function ajax_sync_all_filtered() {
+        check_ajax_referer( 'rps_bulk_sync', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) wp_die();
 
-        // Trova i valori ACF da cercare
-        $acf_values = array();
-        if ( $store_url === '__all__' ) {
-            foreach ( $stores as $url => $data ) {
-                if ( ! empty( $data['status'] ) && ! empty( $data['acf_opt_value'] ) ) {
-                    $acf_values[] = $data['acf_opt_value'];
-                }
-            }
-        } else {
-            if ( isset( $stores[ $store_url ] ) && ! empty( $stores[ $store_url ]['acf_opt_value'] ) ) {
-                $acf_values[] = $stores[ $store_url ]['acf_opt_value'];
-            }
+        $store_urls = isset( $_POST['stores'] ) ? array_map( 'sanitize_text_field', $_POST['stores'] ) : array();
+        if ( empty( $store_urls ) ) {
+            wp_send_json_error( 'Seleziona almeno uno store' );
+            return;
         }
 
-        if ( empty( $acf_values ) ) return array();
-
-        // Query per prodotti che hanno almeno uno dei valori ACF in sites_to_synch
+        // Ricostruisci la query dai parametri filtro
         $args = array(
             'post_type'      => 'product',
             'post_status'    => 'publish',
             'posts_per_page' => -1,
             'fields'         => 'ids',
-            'meta_query'     => array(
-                'relation' => 'OR',
-            ),
+        );
+
+        $s = isset( $_POST['s'] ) ? sanitize_text_field( $_POST['s'] ) : '';
+        $product_cat = isset( $_POST['product_cat'] ) ? (int) $_POST['product_cat'] : 0;
+        $product_brand = isset( $_POST['product_brand'] ) ? (int) $_POST['product_brand'] : 0;
+        $product_tag = isset( $_POST['product_tag'] ) ? (int) $_POST['product_tag'] : 0;
+        $status = isset( $_POST['sync_status'] ) ? sanitize_text_field( $_POST['sync_status'] ) : '';
+        $store_filter = isset( $_POST['store_filter'] ) ? sanitize_text_field( $_POST['store_filter'] ) : '';
+
+        if ( $s ) $args['s'] = $s;
+        if ( $product_cat ) $args['tax_query'][] = array( 'taxonomy' => 'product_cat', 'field' => 'term_id', 'terms' => $product_cat );
+        if ( $product_brand ) $args['tax_query'][] = array( 'taxonomy' => 'product_brand', 'field' => 'term_id', 'terms' => $product_brand );
+        if ( $product_tag ) $args['tax_query'][] = array( 'taxonomy' => 'product_tag', 'field' => 'term_id', 'terms' => $product_tag );
+
+        if ( $status == 'synced' ) {
+            if ( $store_filter ) { $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => $store_filter, 'compare' => 'LIKE' ); }
+            else { $args['meta_query'][] = array( 'key' => 'mpsrel', 'compare' => 'EXISTS' ); $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => 'a:0:{}', 'compare' => '!=' ); }
+        } elseif ( $status == 'not-synced' ) {
+            $args['meta_query']['relation'] = 'OR';
+            if ( $store_filter ) { $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => $store_filter, 'compare' => 'NOT LIKE' ); }
+            $args['meta_query'][] = array( 'key' => 'mpsrel', 'compare' => 'NOT EXISTS' );
+            $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => 'a:0:{}', 'compare' => '=' );
+        }
+
+        $query = new \WP_Query( $args );
+        $product_ids = $query->posts;
+
+        if ( empty( $product_ids ) ) {
+            wp_send_json_error( 'Nessun prodotto trovato con i filtri correnti' );
+            return;
+        }
+
+        $batch_id = RPS_Background_Sync::instance()->create_batch( $product_ids, $store_urls );
+        wp_send_json_success( array( 'batch_id' => $batch_id, 'count' => count( $product_ids ) ) );
+    }
+
+    /**
+     * Trova tutti i product ID flaggati per un dato store (o per qualsiasi store).
+     */
+    private static function get_flagged_product_ids( $store_url, $mode = 'all' ) {
+        $stores = get_option( 'wc_api_mps_stores', array() );
+
+        $acf_values = array();
+        $store_urls_to_check = array();
+        if ( $store_url === '__all__' ) {
+            foreach ( $stores as $url => $data ) {
+                if ( ! empty( $data['status'] ) && ! empty( $data['acf_opt_value'] ) ) {
+                    $acf_values[] = $data['acf_opt_value'];
+                    $store_urls_to_check[] = $url;
+                }
+            }
+        } else {
+            if ( isset( $stores[ $store_url ] ) && ! empty( $stores[ $store_url ]['acf_opt_value'] ) ) {
+                $acf_values[] = $stores[ $store_url ]['acf_opt_value'];
+                $store_urls_to_check[] = $store_url;
+            }
+        }
+
+        if ( empty( $acf_values ) ) return array();
+
+        $args = array(
+            'post_type'      => 'product',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'meta_query'     => array( 'relation' => 'OR' ),
         );
 
         foreach ( $acf_values as $val ) {
@@ -279,7 +336,120 @@ class RPS_Plugin {
         }
 
         $query = new \WP_Query( $args );
-        return $query->posts;
+        $product_ids = $query->posts;
+
+        // Se modalità "missing", filtra solo quelli senza mpsrel per gli store selezionati
+        if ( $mode === 'missing' && ! empty( $product_ids ) ) {
+            $filtered = array();
+            foreach ( $product_ids as $pid ) {
+                $mpsrel = get_post_meta( $pid, 'mpsrel', true );
+                if ( ! is_array( $mpsrel ) ) {
+                    $filtered[] = $pid;
+                    continue;
+                }
+                // Controlla se manca l'ID remoto per almeno uno degli store selezionati
+                foreach ( $store_urls_to_check as $surl ) {
+                    if ( ! isset( $mpsrel[ $surl ] ) || ! $mpsrel[ $surl ] ) {
+                        $filtered[] = $pid;
+                        break;
+                    }
+                }
+            }
+            $product_ids = $filtered;
+        }
+
+        return $product_ids;
+    }
+
+    public function ajax_migrate_urls() {
+        check_ajax_referer( 'rps_bulk_sync', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) wp_die();
+
+        $old_url = isset( $_POST['old_url'] ) ? rtrim( sanitize_text_field( $_POST['old_url'] ), '/' ) : '';
+        $new_url = isset( $_POST['new_url'] ) ? rtrim( sanitize_text_field( $_POST['new_url'] ), '/' ) : '';
+
+        if ( ! $old_url || ! $new_url || $old_url === $new_url ) {
+            wp_send_json_error( 'URL non validi o identici' );
+            return;
+        }
+
+        global $wpdb;
+        $changes = array();
+
+        // 1. wp_options: wc_api_mps_stores - aggiorna la chiave dell'array (URL dello store)
+        $stores = get_option( 'wc_api_mps_stores', array() );
+        if ( isset( $stores[ $old_url ] ) ) {
+            $stores[ $new_url ] = $stores[ $old_url ];
+            unset( $stores[ $old_url ] );
+            update_option( 'wc_api_mps_stores', $stores );
+            $changes[] = 'wp_options: wc_api_mps_stores aggiornato';
+        }
+
+        // 2. wp_postmeta: mpsrel - trova e sostituisci la chiave URL nei valori serializzati
+        $mpsrel_posts = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = 'mpsrel' AND meta_value LIKE %s",
+                '%' . $wpdb->esc_like( $old_url ) . '%'
+            )
+        );
+        $post_count = 0;
+        foreach ( $mpsrel_posts as $row ) {
+            $data = maybe_unserialize( $row->meta_value );
+            if ( is_array( $data ) && isset( $data[ $old_url ] ) ) {
+                $data[ $new_url ] = $data[ $old_url ];
+                unset( $data[ $old_url ] );
+                update_post_meta( $row->post_id, 'mpsrel', $data );
+                $post_count++;
+            }
+        }
+        if ( $post_count ) {
+            $changes[] = "wp_postmeta: mpsrel aggiornato su {$post_count} prodotti/variazioni/immagini";
+        }
+
+        // 3. wp_termmeta: mpsrel - stessa cosa per categorie/tag/attributi/brand
+        $mpsrel_terms = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT term_id, meta_value FROM {$wpdb->termmeta} WHERE meta_key = 'mpsrel' AND meta_value LIKE %s",
+                '%' . $wpdb->esc_like( $old_url ) . '%'
+            )
+        );
+        $term_count = 0;
+        foreach ( $mpsrel_terms as $row ) {
+            $data = maybe_unserialize( $row->meta_value );
+            if ( is_array( $data ) && isset( $data[ $old_url ] ) ) {
+                $data[ $new_url ] = $data[ $old_url ];
+                unset( $data[ $old_url ] );
+                update_term_meta( $row->term_id, 'mpsrel', $data );
+                $term_count++;
+            }
+        }
+        if ( $term_count ) {
+            $changes[] = "wp_termmeta: mpsrel aggiornato su {$term_count} termini (categorie/tag/brand/attributi)";
+        }
+
+        // 4. rps_sync_log: store_url
+        $log_table = $wpdb->prefix . 'rps_sync_log';
+        $log_count = $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE {$log_table} SET store_url = %s WHERE store_url = %s",
+                $new_url, $old_url
+            )
+        );
+        if ( $log_count ) {
+            $changes[] = "rps_sync_log: {$log_count} righe aggiornate";
+        }
+
+        if ( empty( $changes ) ) {
+            wp_send_json_error( "Nessun dato trovato per l'URL: {$old_url}" );
+            return;
+        }
+
+        RPS_Logger::instance()->info( 'url_migration', "URL migrato: {$old_url} -> {$new_url}", array(
+            'store_url' => $new_url,
+            'request_data' => array( 'old_url' => $old_url, 'new_url' => $new_url, 'changes' => $changes ),
+        ) );
+
+        wp_send_json_success( array( 'changes' => $changes ) );
     }
 
     public static function activate() {
