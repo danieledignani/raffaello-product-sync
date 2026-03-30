@@ -2,6 +2,11 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.3.0] - 2026-03-30
+
+### Modifiche
+- Force sync split, UI migliorata, sync tutti filtrati, URL migration
+
 ## [4.2.1] - 2026-03-30
 
 ### Modifiche

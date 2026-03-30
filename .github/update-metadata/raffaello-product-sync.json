@@ -1,18 +1,18 @@
 {
   "name": "Raffaello Product Sync",
-  "version": "4.2.1",
-  "download_url": "https://github.com/danieledignani/raffaello-product-sync/releases/download/4.2.1/raffaello-product-sync.zip",
+  "version": "4.3.0",
+  "download_url": "https://github.com/danieledignani/raffaello-product-sync/releases/download/4.3.0/raffaello-product-sync.zip",
   "homepage": "https://github.com/danieledignani/raffaello-product-sync",
   "requires": "5.8",
   "tested": "6.8",
   "requires_php": "7.4",
-  "last_updated": "2026-03-30 23:09:07",
+  "last_updated": "2026-03-30 23:26:51",
   "upgrade_notice": "Aggiornamento automatico da GitHub",
   "author": "Daniele Dignani",
   "author_homepage": "https://github.com/danieledignani",
   "sections": {
     "description": "Sincronizzazione prodotti WooCommerce tra più store tramite REST API.",
     "installation": "Carica il plugin tramite il pannello Plugin > Aggiungi nuovo o scompatta nella cartella wp-content/plugins/",
-    "changelog": "<h4>4.2.1 (2026-03-30)</h4><ul>\n</ul><h5>Modifiche</h5><ul>\n<li>Riepilogo con link al Log al completamento batch, pre-filtro errori</li>\n<li>Force Sync integrato in Bulk Sync, rimossa pagina separata, Log rinominato</li>\n<li>Rimozione stock sync su ordini, fix immagini variazioni, pulizia</li>\n<h4>4.2.0 (2026-03-30)</h4><ul>\n</ul><h5>Modifiche</h5><ul>\n<li>Fix YAML workflow: riscritto per evitare errori parser, usa jq per JSON</li>\n<li>CHANGELOG.md storico + Force Sync per store</li>\n<h4>4.1.0 (2026-03-30)</h4><ul>\n</ul><h5>Aggiunto</h5><ul>\n<li>Retry con exponential backoff sulle chiamate API (max 3 tentativi su timeout/500/502/503)</li>\n<li>Cache transient per tassonomie remote (categorie, tag, brand, attributi) - evita chiamate API duplicate in bulk sync</li>\n<li>Dashboard widget nella home admin con stato sync, errori 24h, batch attivo</li>\n<li>Notifica email opzionale al completamento del bulk sync (configurabile in Settings)</li>\n</ul><h5>Fixato</h5><ul>\n<li>Bug minori: null check su image in taxonomy sync, before_delete_post filtrato per post type, formato exclude_meta_on_duplicate, posizione immagini sequenziale</li>\n"
+    "changelog": "<h4>4.3.0 (2026-03-30)</h4><ul>\n</ul><h5>Modifiche</h5><ul>\n<li>Force sync split, UI migliorata, sync tutti filtrati, URL migration</li>\n<h4>4.2.1 (2026-03-30)</h4><ul>\n</ul><h5>Modifiche</h5><ul>\n<li>Riepilogo con link al Log al completamento batch, pre-filtro errori</li>\n<li>Force Sync integrato in Bulk Sync, rimossa pagina separata, Log rinominato</li>\n<li>Rimozione stock sync su ordini, fix immagini variazioni, pulizia</li>\n<h4>4.2.0 (2026-03-30)</h4><ul>\n</ul><h5>Modifiche</h5><ul>\n<li>Fix YAML workflow: riscritto per evitare errori parser, usa jq per JSON</li>\n<li>CHANGELOG.md storico + Force Sync per store</li>\n"
   }
 }
