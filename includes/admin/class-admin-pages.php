@@ -215,6 +215,7 @@ class RPS_Admin_Pages {
                 <p id="rps-progress-text">0 / 0 completati</p>
                 <p id="rps-progress-errors" style="color:#dc3232;"></p>
                 <button type="button" class="button" id="rps-cancel-batch">Annulla</button>
+                <div id="rps-batch-summary"></div>
             </div>
 
             <!-- Force Sync: sincronizza tutti i prodotti flaggati per uno store -->

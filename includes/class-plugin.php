@@ -70,8 +70,9 @@ class RPS_Plugin {
             wp_enqueue_style( 'rps-admin', RPS_PLUGIN_URL . 'assets/css/admin.css', array(), RPS_VERSION );
             wp_enqueue_script( 'rps-bulk-sync', RPS_PLUGIN_URL . 'assets/js/bulk-sync.js', array( 'jquery' ), RPS_VERSION, true );
             wp_localize_script( 'rps-bulk-sync', 'rps_ajax', array(
-                'ajax_url' => admin_url( 'admin-ajax.php' ),
-                'nonce'    => wp_create_nonce( 'rps_bulk_sync' ),
+                'ajax_url'     => admin_url( 'admin-ajax.php' ),
+                'nonce'        => wp_create_nonce( 'rps_bulk_sync' ),
+                'log_page_url' => admin_url( 'admin.php?page=wc_api_mps_sync_log' ),
             ) );
         }
     }

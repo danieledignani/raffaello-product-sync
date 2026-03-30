@@ -103,8 +103,12 @@
             '&level=' + $('#rps-log-level').val();
     });
 
-    // Auto-load logs if on log page
+    // Auto-load logs if on log page, con pre-filtro da URL
     if ($('#rps-log-table').length) {
+        var urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('level')) {
+            $('#rps-log-level').val(urlParams.get('level'));
+        }
         loadLogs(1);
     }
 
@@ -136,6 +140,16 @@
                     var msg = d.status === 'completed' ? 'Sync completato!' : 'Sync annullato.';
                     $('#rps-progress-text').text(msg + ' ' + d.completed + ' ok, ' + d.failed + ' errori su ' + d.total);
                     $('#rps-cancel-batch').hide();
+
+                    // Riepilogo con link al Log
+                    var logUrl = rps_ajax.log_page_url || (window.location.origin + '/wp-admin/admin.php?page=wc_api_mps_sync_log');
+                    var summary = '<div style="margin-top:12px;">';
+                    summary += '<a href="' + logUrl + '" class="button">Vedi Log completo</a>';
+                    if (d.failed > 0) {
+                        summary += ' <a href="' + logUrl + '&level=error" class="button" style="color:#dc3232;">Vedi ' + d.failed + ' errori</a>';
+                    }
+                    summary += '</div>';
+                    $('#rps-batch-summary').html(summary);
                 }
             });
         }, 3000);
