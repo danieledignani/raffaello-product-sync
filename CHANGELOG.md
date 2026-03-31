@@ -2,6 +2,11 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.4.1] - 2026-03-31
+
+### Modifiche
+- Fix: tabella log non creata dopo aggiornamento plugin (auto-create al primo uso)
+
 ## [4.4.0] - 2026-03-31
 
 ### Modifiche
