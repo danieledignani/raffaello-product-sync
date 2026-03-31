@@ -98,12 +98,12 @@ jobs:
           fi
 
           # Genera HTML dal CHANGELOG.md per il JSON (ultime 3 versioni)
-          CHANGELOG_HTML=$(awk '/^## \[/{n++} n<=3' CHANGELOG.md | \
-            sed 's/^## \[\(.*\)\] - \(.*\)/<h4>\1 (\2)<\/h4><ul>/' | \
-            sed 's/^### \(.*\)/<\/ul><h5>\1<\/h5><ul>/' | \
-            sed 's/^- \(.*\)/<li>\1<\/li>/' | \
-            grep -v '^$' | grep -v '^#' | grep -v '^Tutte' | \
-            jq -Rs .)
+          CHANGELOG_HTML=$(awk '
+            /^## \[/ { n++; if (n>3) exit; if (in_list) print "</ul>"; in_list=0; gsub(/^## \[/, ""); gsub(/\] - /, " ("); gsub(/$/, ")"); print "<h4>" $0 "</h4>"; next }
+            /^### / { if (in_list) print "</ul>"; gsub(/^### /, ""); print "<h5>" $0 "</h5><ul>"; in_list=1; next }
+            /^- / { gsub(/^- /, ""); print "<li>" $0 "</li>"; next }
+          END { if (in_list) print "</ul>" }
+          ' CHANGELOG.md | jq -Rs .)
 
           # Scrivi il JSON metadata
           jq -n \
@@ -126,7 +126,7 @@ jobs:
               author: "Daniele Dignani",
               author_homepage: "https://github.com/danieledignani",
               sections: {
-                description: "Sincronizzazione prodotti WooCommerce tra più store tramite REST API.",
+                description: "Sincronizzazione prodotti WooCommerce tra più store via REST API — sync completo (prodotti, variazioni, categorie, tag, brand, attributi, immagini, meta), bulk sync asincrono con progress bar, force sync per store, logging su database con viewer filtri ed export CSV, aggiustamento prezzi per store, test suite integrata, migrazione URL, aggiornamento automatico da GitHub.",
                 installation: "Carica il plugin tramite il pannello Plugin > Aggiungi nuovo o scompatta nella cartella wp-content/plugins/",
                 changelog: $changelog
               }

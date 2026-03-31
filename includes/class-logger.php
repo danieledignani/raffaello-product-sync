@@ -38,9 +38,10 @@ class RPS_Logger {
         $table_name = $wpdb->prefix . 'rps_sync_log';
         $charset_collate = $wpdb->get_charset_collate();
 
+        // Compatibile con MariaDB 5.5+ (no DEFAULT CURRENT_TIMESTAMP su DATETIME)
         $sql = "CREATE TABLE $table_name (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-            timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            timestamp datetime NOT NULL,
             level varchar(20) NOT NULL DEFAULT 'info',
             context varchar(100) NOT NULL DEFAULT '',
             message text NOT NULL,
@@ -49,7 +50,7 @@ class RPS_Logger {
             user_id bigint(20) unsigned DEFAULT NULL,
             request_data longtext DEFAULT NULL,
             response_data longtext DEFAULT NULL,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY idx_timestamp (timestamp),
             KEY idx_level (level),
             KEY idx_product_id (product_id),
@@ -64,6 +65,7 @@ class RPS_Logger {
         global $wpdb;
 
         $data = array(
+            'timestamp'  => current_time( 'mysql' ),
             'level'      => $level,
             'context'    => substr( $context, 0, 100 ),
             'message'    => $message,

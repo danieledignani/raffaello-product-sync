@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Raffaello Product Sync
  * Plugin URI: https://github.com/danieledignani/raffaello-product-sync
- * Description: Sincronizzazione prodotti WooCommerce tra più store tramite REST API. Fork personalizzato con logging avanzato, sync asincrono e aggiornamento automatico da GitHub.
+ * Description: Sincronizzazione prodotti WooCommerce tra più store via REST API — sync completo (prodotti, variazioni, categorie, tag, brand, attributi, immagini, meta), bulk sync asincrono con progress bar, force sync per store, logging su database con viewer filtri ed export CSV, aggiustamento prezzi per store, test suite integrata, migrazione URL, aggiornamento automatico da GitHub.
  * Version: 4.0.0
  * Author: Daniele Dignani
  * Author URI: https://github.com/danieledignani
