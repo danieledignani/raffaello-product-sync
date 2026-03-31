@@ -325,7 +325,7 @@
                 store_url: store
             },
             success: function(resp) {
-                $btn.prop('disabled', false).text('Esegui Test Suite');
+                $btn.prop('disabled', false).text('Esegui Test');
                 if (!resp.success) {
                     $results.html('<div class="notice notice-error"><p>' + (resp.data || 'Errore') + '</p></div>');
                     return;
@@ -360,7 +360,7 @@
                 $results.html(summary + html);
             },
             error: function(xhr, status) {
-                $btn.prop('disabled', false).text('Esegui Test Suite');
+                $btn.prop('disabled', false).text('Esegui Test');
                 $results.html('<div class="notice notice-error"><p>Errore: ' + status + '. I test potrebbero aver creato dati residui. Usa "Pulizia di emergenza".</p></div>');
             }
         });

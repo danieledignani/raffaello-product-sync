@@ -388,9 +388,14 @@ class RPS_Test_Runner {
             $checks[] = ( $d->length === $local->get_length() && $d->width === $local->get_width() && $d->height === $local->get_height() ) ? 'dimensioni OK' : 'dimensioni FAIL';
         }
 
-        // Stock
-        $checks[] = ( (int) $remote->stock_quantity === $local->get_stock_quantity() ) ? 'stock OK' : "stock FAIL ({$remote->stock_quantity})";
-        $checks[] = ( $remote->manage_stock == $local->get_manage_stock() ) ? 'manage_stock OK' : 'manage_stock FAIL';
+        // Stock (solo se stock sync è abilitato nelle impostazioni)
+        $stock_sync = get_option( 'wc_api_mps_stock_sync' );
+        if ( $stock_sync ) {
+            $checks[] = ( (int) $remote->stock_quantity === $local->get_stock_quantity() ) ? 'stock OK' : "stock FAIL ({$remote->stock_quantity})";
+            $checks[] = ( $remote->manage_stock == $local->get_manage_stock() ) ? 'manage_stock OK' : 'manage_stock FAIL';
+        } else {
+            $checks[] = 'stock SKIP (stock sync disabilitato)';
+        }
 
         // Descrizione (verifica che contenga HTML)
         $has_html = ( strpos( $remote->description, '<strong>' ) !== false || strpos( $remote->description, '<p>' ) !== false );
@@ -421,8 +426,8 @@ class RPS_Test_Runner {
             $checks[] = $remote->sold_individually ? 'sold_individually OK' : 'sold_individually FAIL';
         }
 
-        // Backorders
-        if ( isset( $remote->backorders ) ) {
+        // Backorders (dipende da stock sync attivo)
+        if ( $stock_sync && isset( $remote->backorders ) ) {
             $checks[] = ( $remote->backorders === 'notify' ) ? 'backorders OK' : "backorders FAIL ({$remote->backorders})";
         }
 
@@ -564,7 +569,12 @@ class RPS_Test_Runner {
 
         $checks = array();
         $checks[] = ( (float) $remote->regular_price === (float) $new_price ) ? "prezzo OK ({$new_price})" : "prezzo FAIL ({$remote->regular_price})";
-        $checks[] = ( (int) $remote->stock_quantity === $new_stock ) ? "stock OK ({$new_stock})" : "stock FAIL ({$remote->stock_quantity})";
+        $stock_sync = get_option( 'wc_api_mps_stock_sync' );
+        if ( $stock_sync ) {
+            $checks[] = ( (int) $remote->stock_quantity === $new_stock ) ? "stock OK ({$new_stock})" : "stock FAIL ({$remote->stock_quantity})";
+        } else {
+            $checks[] = 'stock SKIP (stock sync disabilitato)';
+        }
 
         // Verifica meta aggiornato
         $meta_ok = false;

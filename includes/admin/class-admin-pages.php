@@ -434,8 +434,8 @@ class RPS_Admin_Pages {
         $stores = get_option( 'wc_api_mps_stores', array() );
         ?>
         <div class="wrap">
-            <h1>Test Suite</h1><hr>
-            <p class="description">Esegue una serie di test automatici sul sync: crea prodotti di test, li sincronizza, verifica i risultati e pulisce tutto. Nessun residuo sui siti target.</p>
+            <h1>Test</h1><hr>
+            <p class="description">Esegue test automatici sul sync: crea prodotti di test (privati), li sincronizza verso lo store target, verifica tutti i campi e pulisce tutto. Nessun residuo sui siti target.</p>
 
             <table class="form-table"><tbody>
                 <tr>
@@ -454,7 +454,7 @@ class RPS_Admin_Pages {
             </tbody></table>
 
             <p>
-                <button type="button" class="button button-primary" id="rps-test-run">Esegui Test Suite</button>
+                <button type="button" class="button button-primary" id="rps-test-run">Esegui Test</button>
                 <button type="button" class="button" id="rps-test-cleanup" style="margin-left:10px;">Pulizia di emergenza</button>
             </p>
 
