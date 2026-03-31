@@ -273,7 +273,8 @@ class RPS_Plugin {
         $product_brand = isset( $_POST['product_brand'] ) ? (int) $_POST['product_brand'] : 0;
         $product_tag = isset( $_POST['product_tag'] ) ? (int) $_POST['product_tag'] : 0;
         $status = isset( $_POST['sync_status'] ) ? sanitize_text_field( $_POST['sync_status'] ) : '';
-        $store_filter = isset( $_POST['store_filter'] ) ? sanitize_text_field( $_POST['store_filter'] ) : '';
+        $store_filter = isset( $_POST['store_filter'] ) ? array_map( 'sanitize_text_field', (array) $_POST['store_filter'] ) : array();
+        $store_filter = array_filter( $store_filter );
 
         if ( $s ) $args['s'] = $s;
         if ( $product_cat ) $args['tax_query'][] = array( 'taxonomy' => 'product_cat', 'field' => 'term_id', 'terms' => $product_cat );
@@ -281,11 +282,21 @@ class RPS_Plugin {
         if ( $product_tag ) $args['tax_query'][] = array( 'taxonomy' => 'product_tag', 'field' => 'term_id', 'terms' => $product_tag );
 
         if ( $status == 'synced' ) {
-            if ( $store_filter ) { $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => $store_filter, 'compare' => 'LIKE' ); }
-            else { $args['meta_query'][] = array( 'key' => 'mpsrel', 'compare' => 'EXISTS' ); $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => 'a:0:{}', 'compare' => '!=' ); }
+            if ( ! empty( $store_filter ) ) {
+                foreach ( $store_filter as $sf ) {
+                    $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => $sf, 'compare' => 'LIKE' );
+                }
+            } else {
+                $args['meta_query'][] = array( 'key' => 'mpsrel', 'compare' => 'EXISTS' );
+                $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => 'a:0:{}', 'compare' => '!=' );
+            }
         } elseif ( $status == 'not-synced' ) {
             $args['meta_query']['relation'] = 'OR';
-            if ( $store_filter ) { $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => $store_filter, 'compare' => 'NOT LIKE' ); }
+            if ( ! empty( $store_filter ) ) {
+                foreach ( $store_filter as $sf ) {
+                    $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => $sf, 'compare' => 'NOT LIKE' );
+                }
+            }
             $args['meta_query'][] = array( 'key' => 'mpsrel', 'compare' => 'NOT EXISTS' );
             $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => 'a:0:{}', 'compare' => '=' );
         }

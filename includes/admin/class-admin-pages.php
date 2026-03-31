@@ -202,7 +202,8 @@ class RPS_Admin_Pages {
         $product_brand = isset( $_REQUEST['product_brand'] ) ? (int) $_REQUEST['product_brand'] : 0;
         $product_tag = isset( $_REQUEST['product_tag'] ) ? (int) $_REQUEST['product_tag'] : 0;
         $status = isset( $_REQUEST['wc_api_mps_status'] ) ? sanitize_text_field( $_REQUEST['wc_api_mps_status'] ) : '';
-        $store_filter = isset( $_REQUEST['wc_api_mps_store'] ) ? $_REQUEST['wc_api_mps_store'] : '';
+        $store_filter = isset( $_REQUEST['wc_api_mps_store'] ) ? (array) $_REQUEST['wc_api_mps_store'] : array();
+        $store_filter = array_filter( array_map( 'sanitize_text_field', $store_filter ) );
         $s = isset( $_REQUEST['s'] ) ? sanitize_text_field( $_REQUEST['s'] ) : '';
         $record_per_page = isset( $_REQUEST['wc_api_mps_record_per_page'] ) ? (int) $_REQUEST['wc_api_mps_record_per_page'] : 10;
         ?>
@@ -266,10 +267,19 @@ class RPS_Admin_Pages {
                     <div><label style="display:block;font-weight:600;margin-bottom:4px;">Brand</label><?php wp_dropdown_categories( array( 'show_option_none' => 'Tutti', 'option_none_value' => 0, 'orderby' => 'name', 'show_count' => 1, 'hierarchical' => 1, 'name' => 'product_brand', 'selected' => $product_brand, 'taxonomy' => 'product_brand' ) ); ?></div>
                     <div><label style="display:block;font-weight:600;margin-bottom:4px;">Tag</label><?php wp_dropdown_categories( array( 'show_option_none' => 'Tutti', 'option_none_value' => 0, 'orderby' => 'name', 'show_count' => 1, 'hierarchical' => 1, 'name' => 'product_tag', 'selected' => $product_tag, 'taxonomy' => 'product_tag' ) ); ?></div>
                     <div><label style="display:block;font-weight:600;margin-bottom:4px;">Per pagina</label><select name="wc_api_mps_record_per_page"><?php foreach ( array(5,10,25,50,100) as $n ) { $sel = $record_per_page == $n ? ' selected' : ''; echo "<option value=\"{$n}\"{$sel}>{$n}</option>"; } ?></select></div>
-                    <div><label style="display:block;font-weight:600;margin-bottom:4px;">Stato sync</label>
-                        <?php if ( $stores ) : ?><select name="wc_api_mps_store"><option value="">Tutti gli store</option><?php foreach ( $stores as $su => $sd ) { if ( $sd['status'] ) { $sel = $store_filter == $su ? ' selected' : ''; echo '<option value="'.esc_url($su).'"'.$sel.'>'.esc_url($su).'</option>'; } } ?></select><?php endif; ?>
+                    <div><label style="display:block;font-weight:600;margin-bottom:4px;">Filtra per Store</label>
+                        <?php if ( $stores ) : ?>
+                        <fieldset style="display:flex;flex-wrap:wrap;gap:6px 15px;">
+                            <?php foreach ( $stores as $su => $sd ) { if ( $sd['status'] ) {
+                                $sname = ! empty( $sd['store_abbreviation'] ) ? $sd['store_abbreviation'] : ( ! empty( $sd['store_name'] ) ? $sd['store_name'] : $su );
+                                $chk = in_array( $su, $store_filter ) ? ' checked' : '';
+                                echo '<label><input type="checkbox" name="wc_api_mps_store[]" value="'.esc_attr($su).'"'.$chk.' /> '.esc_html($sname).'</label>';
+                            } } ?>
+                        </fieldset>
+                        <?php endif; ?>
                     </div>
                     <div>
+                        <label style="display:block;font-weight:600;margin-bottom:4px;">Stato sync</label>
                         <fieldset style="display:flex;gap:10px;"><?php foreach ( array( '' => 'Tutti', 'synced' => 'Sincronizzati', 'not-synced' => 'Non sincronizzati' ) as $v => $l ) { $chk = $status == $v ? ' checked' : ''; echo "<label><input type=\"radio\" name=\"wc_api_mps_status\" value=\"{$v}\"{$chk}> {$l}</label>"; } ?></fieldset>
                     </div>
                     <div><input name="filter" class="button button-secondary" value="Filtra" type="submit"> <a class="button" href="<?php echo esc_url( $page_url ); ?>">Reset</a></div>
@@ -297,11 +307,22 @@ class RPS_Admin_Pages {
                     if ( $product_tag ) $args['tax_query'][] = array( 'taxonomy' => 'product_tag', 'field' => 'term_id', 'terms' => $product_tag );
 
                     if ( $status == 'synced' ) {
-                        if ( $store_filter ) { $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => $store_filter, 'compare' => 'LIKE' ); }
-                        else { $args['meta_query'][] = array( 'key' => 'mpsrel', 'compare' => 'EXISTS' ); $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => 'a:0:{}', 'compare' => '!=' ); }
+                        if ( ! empty( $store_filter ) ) {
+                            // Sincronizzati per TUTTI gli store selezionati
+                            foreach ( $store_filter as $sf ) {
+                                $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => $sf, 'compare' => 'LIKE' );
+                            }
+                        } else {
+                            $args['meta_query'][] = array( 'key' => 'mpsrel', 'compare' => 'EXISTS' );
+                            $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => 'a:0:{}', 'compare' => '!=' );
+                        }
                     } elseif ( $status == 'not-synced' ) {
                         $args['meta_query']['relation'] = 'OR';
-                        if ( $store_filter ) { $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => $store_filter, 'compare' => 'NOT LIKE' ); }
+                        if ( ! empty( $store_filter ) ) {
+                            foreach ( $store_filter as $sf ) {
+                                $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => $sf, 'compare' => 'NOT LIKE' );
+                            }
+                        }
                         $args['meta_query'][] = array( 'key' => 'mpsrel', 'compare' => 'NOT EXISTS' );
                         $args['meta_query'][] = array( 'key' => 'mpsrel', 'value' => 'a:0:{}', 'compare' => '=' );
                     }
@@ -353,7 +374,7 @@ class RPS_Admin_Pages {
                     if ( $product_brand ) $add_args['product_brand'] = $product_brand;
                     if ( $product_tag ) $add_args['product_tag'] = $product_tag;
                     if ( $status ) $add_args['wc_api_mps_status'] = $status;
-                    if ( $store_filter ) $add_args['wc_api_mps_store'] = $store_filter;
+                    if ( ! empty( $store_filter ) ) $add_args['wc_api_mps_store'] = $store_filter;
                     echo '<div class="tablenav"><div class="tablenav-pages">';
                     echo paginate_links( array( 'base' => admin_url('/admin.php?page=wc_api_mps_bulk_sync&paged=%#%'), 'format' => '', 'current' => max(1,$paged), 'total' => $records->max_num_pages, 'add_args' => $add_args ) );
                     echo '</div></div>';
@@ -371,7 +392,7 @@ class RPS_Admin_Pages {
                             }
                         } ?>
                     </fieldset>
-                    <p class="description" style="margin-top:0;">Seleziona gli store di destinazione. Per "Sync selezionati" è obbligatorio. Per "Sync tutti i filtrati" puoi anche non selezionarne: ogni prodotto verrà sincronizzato verso gli store già configurati nel suo campo ACF.</p>
+                    <p class="description" style="margin-top:0;"><strong>Se selezioni degli store:</strong> i prodotti verranno sincronizzati verso quegli store. Se un prodotto non era ancora flaggato per quello store, verrà aggiunto automaticamente al suo campo ACF.<br><strong>Se non selezioni nessuno store:</strong> ogni prodotto verrà sincronizzato verso gli store già configurati nel suo campo ACF.</p>
                     <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
                         <input type="hidden" name="wc_api_mps_record_per_page" value="<?php echo $record_per_page; ?>" />
                         <input name="rps_bulk_sync_bg" class="button button-primary" value="Sync selezionati in Background" type="submit">

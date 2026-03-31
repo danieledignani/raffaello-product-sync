@@ -247,7 +247,7 @@
             product_brand: $('select[name="product_brand"]').val() || 0,
             product_tag: $('select[name="product_tag"]').val() || 0,
             sync_status: $('input[name="wc_api_mps_status"]:checked').val() || '',
-            store_filter: $('select[name="wc_api_mps_store"]').val() || ''
+            store_filter: (function() { var sf = []; $('input[name="wc_api_mps_store[]"]:checked').each(function(){ sf.push($(this).val()); }); return sf; })()
         }, function(resp) {
             if (resp.success) {
                 pollBatch(resp.data.batch_id);
