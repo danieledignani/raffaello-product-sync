@@ -2,6 +2,11 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.5.1] - 2026-03-31
+
+### Modifiche
+- Aggiorna Plugin Update Checker da 5.5 a 5.6
+
 ## [4.5.0] - 2026-03-31
 
 ### Modifiche
