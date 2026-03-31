@@ -273,21 +273,35 @@
         }
         if (!confirm('Attenzione: questa operazione modificherà i dati in wp_options, wp_postmeta e wp_termmeta.\n\nMigrare da:\n' + oldUrl + '\na:\n' + newUrl + '\n\nContinuare?')) return;
 
-        $(this).prop('disabled', true).text('Migrazione in corso...');
-        $.post(rps_ajax.ajax_url, {
-            action: 'rps_migrate_urls',
-            nonce: rps_ajax.nonce,
-            old_url: oldUrl,
-            new_url: newUrl
-        }, function(resp) {
-            $('#rps-migrate-btn').prop('disabled', false).text('Esegui Migrazione');
-            if (resp.success) {
-                var html = '<div class="notice notice-success inline" style="padding:8px 12px;"><strong>Migrazione completata:</strong><ul style="margin:5px 0 0 20px;">';
-                resp.data.changes.forEach(function(c) { html += '<li>' + c + '</li>'; });
-                html += '</ul></div>';
-                $('#rps-migrate-result').html(html);
-            } else {
-                $('#rps-migrate-result').html('<span style="color:#dc3232;">' + (resp.data || 'Errore') + '</span>');
+        var $btn = $(this);
+        $btn.prop('disabled', true).text('Migrazione in corso...');
+        $('#rps-migrate-result').html('<span style="color:#666;">Attendere, potrebbe richiedere qualche secondo...</span>');
+
+        $.ajax({
+            url: rps_ajax.ajax_url,
+            type: 'POST',
+            timeout: 120000,
+            data: {
+                action: 'rps_migrate_urls',
+                nonce: rps_ajax.nonce,
+                old_url: oldUrl,
+                new_url: newUrl
+            },
+            success: function(resp) {
+                $btn.prop('disabled', false).text('Esegui Migrazione');
+                if (resp.success) {
+                    var html = '<div class="notice notice-success inline" style="padding:8px 12px;"><strong>Migrazione completata:</strong><ul style="margin:5px 0 0 20px;">';
+                    resp.data.changes.forEach(function(c) { html += '<li>' + $('<div>').text(c).html() + '</li>'; });
+                    html += '</ul></div>';
+                    $('#rps-migrate-result').html(html);
+                } else {
+                    $('#rps-migrate-result').html('<div class="notice notice-error inline" style="padding:8px 12px;">' + $('<div>').text(resp.data || 'Errore sconosciuto').html() + '</div>');
+                }
+            },
+            error: function(xhr, status) {
+                $btn.prop('disabled', false).text('Esegui Migrazione');
+                var msg = status === 'timeout' ? 'Timeout: la migrazione ha impiegato troppo. Controlla il Log per verificare se è stata completata.' : 'Errore di connessione (' + status + '). Controlla il Log.';
+                $('#rps-migrate-result').html('<div class="notice notice-warning inline" style="padding:8px 12px;">' + msg + ' <a href="' + rps_ajax.log_page_url + '">Vai al Log</a></div>');
             }
         });
     });
