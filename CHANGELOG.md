@@ -2,6 +2,12 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.5.3] - 2026-03-31
+
+### Modifiche
+- Test: rinominato in 'Test', fix warning stock/backorders condizionali
+- Log arricchiti: JSON request/response, ID remoto, link admin, tassonomie
+
 ## [4.5.2] - 2026-03-31
 
 ### Modifiche
