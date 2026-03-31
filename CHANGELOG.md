@@ -2,6 +2,11 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.5.4] - 2026-03-31
+
+### Modifiche
+- Fix link con & nel log viewer (regex ora cattura URL completo con query string)
+
 ## [4.5.3] - 2026-03-31
 
 ### Modifiche
