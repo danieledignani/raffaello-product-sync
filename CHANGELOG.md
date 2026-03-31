@@ -2,6 +2,12 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.5.0] - 2026-03-31
+
+### Modifiche
+- Filtro store multi-select, descrizione comportamento destinazione
+- UX sync filtrati: label 'in Background', store opzionale, descrizione
+
 ## [4.4.2] - 2026-03-31
 
 ### Modifiche
