@@ -126,9 +126,11 @@ if ( ! class_exists( 'WC_API_MPS' ) ) {
             $body     = wp_remote_retrieve_body( $wp_response );
             $response = json_decode( $body );
 
-            // HTTP errors
+            // HTTP errors: 404 su GET = warning (lookup normale), il resto = error
             if ( $response_code >= 400 ) {
-                $this->logger->error( $caller ?: 'api_request', sprintf(
+                $is_lookup_404 = ( $response_code == 404 && strtoupper( $method ) === 'GET' );
+                $log_level = $is_lookup_404 ? 'warning' : 'error';
+                $this->logger->$log_level( $caller ?: 'api_request', sprintf(
                     'Errore HTTP %d - URL: %s',
                     $response_code,
                     $url
@@ -138,9 +140,12 @@ if ( ! class_exists( 'WC_API_MPS' ) ) {
                 ) ) );
             }
 
-            // WC API errors
+            // WC API errors: "risorsa non esiste" su lookup = warning
             if ( isset( $response->code ) && isset( $response->message ) ) {
-                $this->logger->error( $caller ?: 'api_request', sprintf(
+                $is_not_found = in_array( $response->code, array( 'woocommerce_rest_term_invalid', 'woocommerce_rest_product_invalid_id', 'woocommerce_rest_product_cat_invalid_id', 'woocommerce_rest_product_tag_invalid_id' ) );
+                $is_lookup = ( strtoupper( $method ) === 'GET' );
+                $log_level = ( $is_not_found && $is_lookup ) ? 'warning' : 'error';
+                $this->logger->$log_level( $caller ?: 'api_request', sprintf(
                     'Errore API: %s - %s - URL: %s',
                     $response->code,
                     $response->message,
