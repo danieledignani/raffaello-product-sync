@@ -28,6 +28,7 @@ class RPS_Plugin {
         // Admin Columns (hooks per rendering)
         new RPS_Admin_Columns();
         new RPS_Dashboard_Widget();
+        new RPS_Test_Runner();
 
         // Background sync
         RPS_Background_Sync::instance();

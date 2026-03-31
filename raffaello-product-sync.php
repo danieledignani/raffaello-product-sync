@@ -46,6 +46,7 @@ require_once RPS_PLUGIN_PATH . 'includes/class-variation-sync.php';
 require_once RPS_PLUGIN_PATH . 'includes/class-product-sync.php';
 require_once RPS_PLUGIN_PATH . 'includes/class-background-sync.php';
 require_once RPS_PLUGIN_PATH . 'includes/class-dashboard-widget.php';
+require_once RPS_PLUGIN_PATH . 'includes/class-test-runner.php';
 require_once RPS_PLUGIN_PATH . 'includes/class-plugin.php';
 require_once RPS_PLUGIN_PATH . 'includes/admin/class-admin-pages.php';
 require_once RPS_PLUGIN_PATH . 'includes/admin/class-metabox.php';

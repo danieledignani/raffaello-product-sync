@@ -14,6 +14,7 @@ class RPS_Admin_Pages {
         add_submenu_page( 'wc_api_mps', 'Product Sync - Stores', 'Stores', 'manage_options', 'wc_api_mps', array( $this, 'stores_page' ) );
         add_submenu_page( 'wc_api_mps', 'Product Sync - Bulk Sync', 'Bulk Sync', 'manage_options', 'wc_api_mps_bulk_sync', array( $this, 'bulk_sync_page' ) );
         add_submenu_page( 'wc_api_mps', 'Product Sync - Log', 'Log', 'manage_options', 'wc_api_mps_sync_log', array( $this, 'sync_log_page' ) );
+        add_submenu_page( 'wc_api_mps', 'Product Sync - Test', 'Test', 'manage_options', 'wc_api_mps_test', array( $this, 'test_page' ) );
         add_submenu_page( 'wc_api_mps', 'Product Sync - Settings', 'Settings', 'manage_options', 'wc_api_mps_settings', array( $this, 'settings_page' ) );
     }
 
@@ -402,6 +403,40 @@ class RPS_Admin_Pages {
                 <tbody id="rps-log-tbody"><tr><td colspan="8">Caricamento...</td></tr></tbody>
             </table>
             <div id="rps-log-pagination" class="tablenav"><div class="tablenav-pages"></div></div>
+        </div>
+        <?php
+    }
+
+    // ──── TEST PAGE ────
+    public function test_page() {
+        $stores = get_option( 'wc_api_mps_stores', array() );
+        ?>
+        <div class="wrap">
+            <h1>Test Suite</h1><hr>
+            <p class="description">Esegue una serie di test automatici sul sync: crea prodotti di test, li sincronizza, verifica i risultati e pulisce tutto. Nessun residuo sui siti target.</p>
+
+            <table class="form-table"><tbody>
+                <tr>
+                    <th style="width:150px;">Store target</th>
+                    <td>
+                        <select id="rps-test-store">
+                            <?php foreach ( $stores as $url => $data ) {
+                                if ( ! empty( $data['status'] ) ) {
+                                    $name = ! empty( $data['store_name'] ) ? $data['store_name'] : $url;
+                                    echo '<option value="' . esc_attr( $url ) . '">' . esc_html( $name ) . ' (' . esc_url( $url ) . ')</option>';
+                                }
+                            } ?>
+                        </select>
+                    </td>
+                </tr>
+            </tbody></table>
+
+            <p>
+                <button type="button" class="button button-primary" id="rps-test-run">Esegui Test Suite</button>
+                <button type="button" class="button" id="rps-test-cleanup" style="margin-left:10px;">Pulizia di emergenza</button>
+            </p>
+
+            <div id="rps-test-results" style="margin-top:20px;"></div>
         </div>
         <?php
     }

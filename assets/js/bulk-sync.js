@@ -306,4 +306,76 @@
         });
     });
 
+    // ── Test Suite ──
+    $('#rps-test-run').on('click', function() {
+        var store = $('#rps-test-store').val();
+        if (!confirm('Eseguire la test suite su ' + store + '?\n\nVerranno creati prodotti di test temporanei che saranno eliminati al termine.')) return;
+
+        var $btn = $(this);
+        $btn.prop('disabled', true).text('Test in corso...');
+        var $results = $('#rps-test-results');
+        $results.html('<p><span class="spinner is-active" style="float:none;margin:0 8px 0 0;"></span>Esecuzione test in corso, attendere...</p>');
+
+        $.ajax({
+            url: rps_ajax.ajax_url,
+            type: 'POST',
+            timeout: 300000,
+            data: {
+                action: 'rps_run_tests',
+                nonce: rps_ajax.nonce,
+                store_url: store
+            },
+            success: function(resp) {
+                $btn.prop('disabled', false).text('Esegui Test Suite');
+                if (!resp.success) {
+                    $results.html('<div class="notice notice-error"><p>' + (resp.data || 'Errore') + '</p></div>');
+                    return;
+                }
+
+                var html = '<table class="widefat striped"><thead><tr><th style="width:30px">#</th><th style="width:40px">Esito</th><th style="width:250px">Test</th><th>Dettagli</th></tr></thead><tbody>';
+                var pass = 0, fail = 0, warn = 0;
+
+                $.each(resp.data.results, function(i, r) {
+                    var icon = r.status === 'pass' ? '<span style="color:#46b450;">&#10004;</span>' :
+                               r.status === 'fail' ? '<span style="color:#dc3232;">&#10008;</span>' :
+                               r.status === 'warn' ? '<span style="color:#dba617;">&#9888;</span>' :
+                               '<span style="color:#999;">&#8212;</span>';
+                    if (r.status === 'pass') pass++;
+                    else if (r.status === 'fail') fail++;
+                    else if (r.status === 'warn') warn++;
+
+                    html += '<tr><td>' + (i+1) + '</td><td>' + icon + '</td>';
+                    html += '<td><strong>' + $('<div>').text(r.name).html() + '</strong></td>';
+                    html += '<td>' + $('<div>').text(r.message).html() + '</td></tr>';
+                });
+
+                html += '</tbody></table>';
+
+                var summary = '<div style="margin:15px 0;padding:12px 15px;border-radius:4px;' +
+                    (fail > 0 ? 'background:#fbeaea;border:1px solid #dc3232;' : 'background:#ecf7ed;border:1px solid #46b450;') + '">';
+                summary += '<strong>' + pass + ' passati</strong>';
+                if (warn > 0) summary += ', <strong style="color:#dba617;">' + warn + ' warning</strong>';
+                if (fail > 0) summary += ', <strong style="color:#dc3232;">' + fail + ' falliti</strong>';
+                summary += '</div>';
+
+                $results.html(summary + html);
+            },
+            error: function(xhr, status) {
+                $btn.prop('disabled', false).text('Esegui Test Suite');
+                $results.html('<div class="notice notice-error"><p>Errore: ' + status + '. I test potrebbero aver creato dati residui. Usa "Pulizia di emergenza".</p></div>');
+            }
+        });
+    });
+
+    $('#rps-test-cleanup').on('click', function() {
+        if (!confirm('Rimuovere tutti i prodotti/categorie con prefisso "[RPS TEST]"?')) return;
+        $(this).prop('disabled', true);
+        $.post(rps_ajax.ajax_url, { action: 'rps_cleanup_tests', nonce: rps_ajax.nonce }, function(resp) {
+            $('#rps-test-cleanup').prop('disabled', false);
+            if (resp.success) {
+                alert('Pulizia completata: ' + resp.data.cleaned + ' elementi rimossi.');
+            }
+        });
+    });
+
 })(jQuery);

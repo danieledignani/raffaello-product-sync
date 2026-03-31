@@ -281,6 +281,10 @@ if ( ! class_exists( 'WC_API_MPS' ) ) {
             return $this->request( 'POST', "/products/categories/{$category_id}", $data, 'updateCategory' );
         }
 
+        public function deleteCategory( $category_id ) {
+            return $this->request( 'DELETE', "/products/categories/{$category_id}?force=true", null, 'deleteCategory' );
+        }
+
         // ──── Tags ────
 
         public function getTags( $slug ) {
@@ -293,6 +297,10 @@ if ( ! class_exists( 'WC_API_MPS' ) ) {
 
         public function addTag( $data ) {
             return $this->request( 'POST', '/products/tags', $data, 'addTag' );
+        }
+
+        public function deleteTag( $tag_id ) {
+            return $this->request( 'DELETE', "/products/tags/{$tag_id}?force=true", null, 'deleteTag' );
         }
 
         public function updateTag( $data, $tag_id ) {
