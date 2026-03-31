@@ -229,11 +229,10 @@
         var total = $(this).data('total');
         var stores = [];
         $('.rps-sites input[type="checkbox"]:checked').each(function() { stores.push($(this).val()); });
-        if (!stores.length) {
-            alert('Seleziona almeno uno store di destinazione');
-            return;
-        }
-        if (!confirm('Avviare il sync in background di tutti i ' + total + ' prodotti filtrati verso ' + stores.length + ' store?')) return;
+        var msg = stores.length
+            ? 'Sync in background di ' + total + ' prodotti verso ' + stores.length + ' store selezionati.'
+            : 'Sync in background di ' + total + ' prodotti verso gli store già configurati per ciascun prodotto (campo ACF).';
+        if (!confirm(msg + '\n\nContinuare?')) return;
 
         // Raccogli i parametri filtro dal form
         var filterForm = $(this).closest('form').prev().find('form');

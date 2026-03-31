@@ -249,9 +249,15 @@ class RPS_Plugin {
         if ( ! current_user_can( 'manage_options' ) ) wp_die();
 
         $store_urls = isset( $_POST['stores'] ) ? array_map( 'sanitize_text_field', $_POST['stores'] ) : array();
+        // Se nessuno store selezionato, usa tutti gli store attivi
+        // (ogni prodotto verrà sincronizzato verso i suoi store configurati in ACF)
         if ( empty( $store_urls ) ) {
-            wp_send_json_error( 'Seleziona almeno uno store' );
-            return;
+            $all_stores = get_option( 'wc_api_mps_stores', array() );
+            $store_urls = array_keys( array_filter( $all_stores, function( $s ) { return ! empty( $s['status'] ); } ) );
+            if ( empty( $store_urls ) ) {
+                wp_send_json_error( 'Nessuno store configurato e attivo' );
+                return;
+            }
         }
 
         // Ricostruisci la query dai parametri filtro

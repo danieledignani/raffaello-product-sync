@@ -371,11 +371,12 @@ class RPS_Admin_Pages {
                             }
                         } ?>
                     </fieldset>
+                    <p class="description" style="margin-top:0;">Seleziona gli store di destinazione. Per "Sync selezionati" è obbligatorio. Per "Sync tutti i filtrati" puoi anche non selezionarne: ogni prodotto verrà sincronizzato verso gli store già configurati nel suo campo ACF.</p>
                     <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
                         <input type="hidden" name="wc_api_mps_record_per_page" value="<?php echo $record_per_page; ?>" />
                         <input name="rps_bulk_sync_bg" class="button button-primary" value="Sync selezionati in Background" type="submit">
                         <?php if ( $total_found > 0 ) : ?>
-                            <button type="button" class="button" id="rps-sync-all-filtered" data-total="<?php echo $total_found; ?>">Sync tutti i <?php echo $total_found; ?> filtrati</button>
+                            <button type="button" class="button" id="rps-sync-all-filtered" data-total="<?php echo $total_found; ?>">Sync tutti i <?php echo $total_found; ?> filtrati in Background</button>
                         <?php endif; ?>
                     </div>
                 </div>
