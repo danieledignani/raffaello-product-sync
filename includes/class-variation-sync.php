@@ -94,12 +94,12 @@ class RPS_Variation_Sync {
 
             // Create or update
             if ( $dest_variation_id ) {
-                $logger->info( 'variation_sync', "Update variazione {$variation_id} -> {$dest_variation_id}", array( 'store_url' => $url, 'product_id' => $variation_id ) );
                 $result = $api->updateProductVariation( $data, $dest_product_id, $dest_variation_id );
+                $logger->info( 'variation_sync', "Update variazione #{$variation_id} -> remoto #{$dest_variation_id}", array( 'store_url' => $url, 'product_id' => $variation_id, 'request_data' => $data, 'response_data' => $result ) );
             } else {
-                $logger->info( 'variation_sync', "Add variazione {$variation_id}", array( 'store_url' => $url, 'product_id' => $variation_id ) );
                 $result = $api->addProductVariation( $data, $dest_product_id );
                 if ( isset( $result->id ) ) $dest_variation_id = $result->id;
+                $logger->info( 'variation_sync', "Creazione variazione #{$variation_id} -> remoto #{$dest_variation_id}", array( 'store_url' => $url, 'product_id' => $variation_id, 'request_data' => $data, 'response_data' => $result ) );
             }
 
             // Save image mapping

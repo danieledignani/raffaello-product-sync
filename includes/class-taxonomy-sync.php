@@ -88,6 +88,7 @@ class RPS_Taxonomy_Sync {
                 if ( isset( $result->image ) && $result->image && $image_id ) {
                     RPS_Image_Sync::set_destination_image_id( $url, $image_id, $result->image->id );
                 }
+                RPS_Logger::instance()->info( 'category_sync', "Categoria '{$category->name}' creata -> remoto #{$dest_id}", array( 'store_url' => $url, 'request_data' => $data, 'response_data' => $result ) );
             }
 
             $wc_api_mps[ $url ] = $dest_id;
@@ -140,10 +141,14 @@ class RPS_Taxonomy_Sync {
         if ( $exclude_term_description ) unset( $data['description'] );
 
         if ( $dest_id ) {
-            $api->updateTag( $data, $dest_id );
+            $result = $api->updateTag( $data, $dest_id );
+            RPS_Logger::instance()->info( 'tag_sync', "Tag '{$tag->name}' aggiornato -> remoto #{$dest_id}", array( 'store_url' => $url, 'request_data' => $data, 'response_data' => $result ) );
         } else {
             $result = $api->addTag( $data );
-            if ( isset( $result->id ) ) $dest_id = $result->id;
+            if ( isset( $result->id ) ) {
+                $dest_id = $result->id;
+                RPS_Logger::instance()->info( 'tag_sync', "Tag '{$tag->name}' creato -> remoto #{$dest_id}", array( 'store_url' => $url, 'request_data' => $data, 'response_data' => $result ) );
+            }
         }
 
         $wc_api_mps[ $url ] = $dest_id;
@@ -246,10 +251,14 @@ class RPS_Taxonomy_Sync {
         );
 
         if ( $dest_id ) {
-            $api->updateAttributeTerm( $data, $dest_id, $attribute_id );
+            $result = $api->updateAttributeTerm( $data, $dest_id, $attribute_id );
+            RPS_Logger::instance()->info( 'attr_term_sync', "Attr term '{$term->name}' aggiornato -> remoto #{$dest_id}", array( 'store_url' => $url, 'request_data' => $data, 'response_data' => $result ) );
         } else {
             $result = $api->addAttributeTerm( $data, $attribute_id );
-            if ( isset( $result->id ) ) $dest_id = $result->id;
+            if ( isset( $result->id ) ) {
+                $dest_id = $result->id;
+                RPS_Logger::instance()->info( 'attr_term_sync', "Attr term '{$term->name}' creato -> remoto #{$dest_id}", array( 'store_url' => $url, 'request_data' => $data, 'response_data' => $result ) );
+            }
         }
 
         $wc_api_mps[ $url ] = $dest_id;
@@ -320,9 +329,13 @@ class RPS_Taxonomy_Sync {
 
         if ( $dest_id ) {
             $result = $api->updateBrand( $data, $dest_id );
+            RPS_Logger::instance()->info( 'brand_sync', "Brand '{$brand->name}' aggiornato -> remoto #{$dest_id}", array( 'store_url' => $url, 'request_data' => $data, 'response_data' => $result ) );
         } else {
             $result = $api->addBrand( $data );
-            if ( isset( $result->id ) ) $dest_id = $result->id;
+            if ( isset( $result->id ) ) {
+                $dest_id = $result->id;
+                RPS_Logger::instance()->info( 'brand_sync', "Brand '{$brand->name}' creato -> remoto #{$dest_id}", array( 'store_url' => $url, 'request_data' => $data, 'response_data' => $result ) );
+            }
         }
 
         if ( isset( $result->id ) && isset( $result->image ) && $result->image && $image_id ) {

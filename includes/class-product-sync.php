@@ -166,12 +166,14 @@ class RPS_Product_Sync {
 
             // Create or update
             if ( $dest_product_id ) {
-                $logger->info( 'sync_full', "Update prodotto remoto {$dest_product_id}", array( 'product_id' => $product_id, 'store_url' => $store_url ) );
                 $product = $api->updateProduct( $data, $dest_product_id );
+                $remote_edit_url = rtrim( $store_url, '/' ) . '/wp-admin/post.php?post=' . $dest_product_id . '&action=edit';
+                $logger->info( 'sync_full', "Update prodotto remoto #{$dest_product_id} — {$remote_edit_url}", array( 'product_id' => $product_id, 'store_url' => $store_url, 'request_data' => $data, 'response_data' => $product ) );
             } else {
-                $logger->info( 'sync_full', "Creazione nuovo prodotto remoto", array( 'product_id' => $product_id, 'store_url' => $store_url ) );
                 $product = $api->addProduct( $data );
                 if ( isset( $product->id ) ) $dest_product_id = $product->id;
+                $remote_edit_url = $dest_product_id ? ( rtrim( $store_url, '/' ) . '/wp-admin/post.php?post=' . $dest_product_id . '&action=edit' ) : '';
+                $logger->info( 'sync_full', "Creazione nuovo prodotto remoto #{$dest_product_id} — {$remote_edit_url}", array( 'product_id' => $product_id, 'store_url' => $store_url, 'request_data' => $data, 'response_data' => $product ) );
             }
 
             // Save image mapping
@@ -226,7 +228,9 @@ class RPS_Product_Sync {
             RPS_Price_Adjuster::apply( $data, $pid, $sc );
 
             if ( $dest_id ) {
-                $api->updateProduct( $data, $dest_id );
+                $result = $api->updateProduct( $data, $dest_id );
+                $remote_url = rtrim( $store_url, '/' ) . '/wp-admin/post.php?post=' . $dest_id . '&action=edit';
+                RPS_Logger::instance()->info( 'sync_price_qty', "Update prezzo/quantità remoto #{$dest_id} — {$remote_url}", array( 'product_id' => $product_id, 'store_url' => $store_url, 'request_data' => $data, 'response_data' => $result ) );
                 $wc_api_mps[ $store_url ] = $dest_id;
                 if ( ! empty( $variations ) ) {
                     RPS_Variation_Sync::sync_stock( $api, $store_url, $variations, $dest_id, $sc, true );
@@ -260,7 +264,9 @@ class RPS_Product_Sync {
             $dest_id = self::find_destination_product( $api, $store_url, $wc_api_mps, $pid['slug'], $pid['sku'] );
 
             if ( $dest_id ) {
-                $api->updateProduct( $data, $dest_id );
+                $result = $api->updateProduct( $data, $dest_id );
+                $remote_url = rtrim( $store_url, '/' ) . '/wp-admin/post.php?post=' . $dest_id . '&action=edit';
+                RPS_Logger::instance()->info( 'sync_quantity', "Update quantità remoto #{$dest_id} — {$remote_url}", array( 'product_id' => $product_id, 'store_url' => $store_url, 'request_data' => $data, 'response_data' => $result ) );
                 $wc_api_mps[ $store_url ] = $dest_id;
                 if ( ! empty( $variations ) ) {
                     RPS_Variation_Sync::sync_stock( $api, $store_url, $variations, $dest_id, $sc, false );

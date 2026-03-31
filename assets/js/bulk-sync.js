@@ -38,7 +38,7 @@
                     '<td><code style="font-size:12px">' + $('<div>').text(row.timestamp).html() + '</code></td>' +
                     '<td><span style="background:' + color + ';color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600">' + row.level.toUpperCase() + '</span></td>' +
                     '<td><code>' + $('<div>').text(row.context || '').html() + '</code></td>' +
-                    '<td>' + $('<div>').text(row.message).html() + '</td>' +
+                    '<td>' + $('<div>').text(row.message).html().replace(/(https?:\/\/[^\s&<]+)/g, '<a href="$1" target="_blank" style="font-size:11px">$1</a>') + '</td>' +
                     '<td>' + $('<div>').text(row.product_id || '-').html() + '</td>' +
                     '<td style="font-size:11px">' + $('<div>').text(row.store_url || '-').html() + '</td>' +
                     '<td>' + $('<div>').text(row.user_id || '-').html() + '</td>' +
