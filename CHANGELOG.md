@@ -2,6 +2,11 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.4.2] - 2026-03-31
+
+### Modifiche
+- Fix MariaDB 5.5 compat, descrizione plugin, changelog HTML
+
 ## [4.4.1] - 2026-03-31
 
 ### Modifiche

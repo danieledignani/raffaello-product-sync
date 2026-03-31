@@ -1,18 +1,18 @@
 {
   "name": "Raffaello Product Sync",
-  "version": "4.4.1",
-  "download_url": "https://github.com/danieledignani/raffaello-product-sync/releases/download/4.4.1/raffaello-product-sync.zip",
+  "version": "4.4.2",
+  "download_url": "https://github.com/danieledignani/raffaello-product-sync/releases/download/4.4.2/raffaello-product-sync.zip",
   "homepage": "https://github.com/danieledignani/raffaello-product-sync",
   "requires": "5.8",
   "tested": "6.8",
   "requires_php": "7.4",
-  "last_updated": "2026-03-31 07:52:16",
+  "last_updated": "2026-03-31 08:12:20",
   "upgrade_notice": "Aggiornamento automatico da GitHub",
   "author": "Daniele Dignani",
   "author_homepage": "https://github.com/danieledignani",
   "sections": {
-    "description": "Sincronizzazione prodotti WooCommerce tra più store tramite REST API.",
+    "description": "Sincronizzazione prodotti WooCommerce tra più store via REST API — sync completo (prodotti, variazioni, categorie, tag, brand, attributi, immagini, meta), bulk sync asincrono con progress bar, force sync per store, logging su database con viewer filtri ed export CSV, aggiustamento prezzi per store, test suite integrata, migrazione URL, aggiornamento automatico da GitHub.",
     "installation": "Carica il plugin tramite il pannello Plugin > Aggiungi nuovo o scompatta nella cartella wp-content/plugins/",
-    "changelog": "<h4>4.4.1 (2026-03-31)</h4><ul>\n</ul><h5>Modifiche</h5><ul>\n<li>Fix: tabella log non creata dopo aggiornamento plugin (auto-create al primo uso)</li>\n<h4>4.4.0 (2026-03-31)</h4><ul>\n</ul><h5>Modifiche</h5><ul>\n<li>Test suite: aggiunto brand, featured, date_on_sale, ISBN, bookshop_link</li>\n<li>Test suite potenziata: prodotti privati, più campi, tag, pulizia tassonomie remote</li>\n<li>Fix UX migrazione URL: timeout 120s, messaggio attesa, gestione errori</li>\n<h4>4.3.0 (2026-03-30)</h4><ul>\n</ul><h5>Modifiche</h5><ul>\n<li>Force sync split, UI migliorata, sync tutti filtrati, URL migration</li>\n"
+    "changelog": "<h4>4.4.2 (2026-03-31)</h4>\n<h5>Modifiche</h5><ul>\n<li>Fix MariaDB 5.5 compat, descrizione plugin, changelog HTML</li>\n</ul>\n<h4>4.4.1 (2026-03-31)</h4>\n<h5>Modifiche</h5><ul>\n<li>Fix: tabella log non creata dopo aggiornamento plugin (auto-create al primo uso)</li>\n</ul>\n<h4>4.4.0 (2026-03-31)</h4>\n<h5>Modifiche</h5><ul>\n<li>Test suite: aggiunto brand, featured, date_on_sale, ISBN, bookshop_link</li>\n<li>Test suite potenziata: prodotti privati, più campi, tag, pulizia tassonomie remote</li>\n<li>Fix UX migrazione URL: timeout 120s, messaggio attesa, gestione errori</li>\n</ul>\n"
   }
 }
