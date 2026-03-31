@@ -2,6 +2,11 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.5.2] - 2026-03-31
+
+### Modifiche
+- 404 su lookup da ERROR a WARNING, ERROR solo per fallimenti reali
+
 ## [4.5.1] - 2026-03-31
 
 ### Modifiche
