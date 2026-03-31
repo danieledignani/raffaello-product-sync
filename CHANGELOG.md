@@ -2,6 +2,13 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.4.0] - 2026-03-31
+
+### Modifiche
+- Test suite: aggiunto brand, featured, date_on_sale, ISBN, bookshop_link
+- Test suite potenziata: prodotti privati, più campi, tag, pulizia tassonomie remote
+- Fix UX migrazione URL: timeout 120s, messaggio attesa, gestione errori
+
 ## [4.3.0] - 2026-03-30
 
 ### Modifiche
