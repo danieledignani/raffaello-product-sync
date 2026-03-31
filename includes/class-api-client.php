@@ -357,6 +357,10 @@ if ( ! class_exists( 'WC_API_MPS' ) ) {
             return $this->request( 'POST', "/products/brands/{$brand_id}", $data, 'updateBrand' );
         }
 
+        public function deleteBrand( $brand_id ) {
+            return $this->request( 'DELETE', "/products/brands/{$brand_id}?force=true", null, 'deleteBrand' );
+        }
+
         // ──── Media ────
 
         public function getMedias( $search ) {

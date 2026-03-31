@@ -31,9 +31,11 @@ class RPS_Test_Runner {
             'local_products'    => array(),
             'local_categories'  => array(),
             'local_tags'        => array(),
+            'local_brands'      => array(),
             'remote_products'   => array(),
             'remote_categories' => array(),
             'remote_tags'       => array(),
+            'remote_brands'     => array(),
         );
 
         // ── TEST 1: Connessione API ──
@@ -53,8 +55,13 @@ class RPS_Test_Runner {
         $results[] = $tag_result;
         $test_tag_id = isset( $tag_result['data']['local_id'] ) ? $tag_result['data']['local_id'] : 0;
 
-        // ── TEST 4: Crea prodotto semplice (PRIVATO, molti campi) ──
-        $simple_result = $this->test_create_simple_product( $test_cat_id, $test_tag_id, $cleanup );
+        // ── TEST 4: Crea brand test ──
+        $brand_result = $this->test_create_brand( $api, $store_url, $cleanup );
+        $results[] = $brand_result;
+        $test_brand_id = isset( $brand_result['data']['local_id'] ) ? $brand_result['data']['local_id'] : 0;
+
+        // ── TEST 5: Crea prodotto semplice (PRIVATO, molti campi) ──
+        $simple_result = $this->test_create_simple_product( $test_cat_id, $test_tag_id, $test_brand_id, $cleanup );
         $results[] = $simple_result;
         $simple_id = isset( $simple_result['data']['product_id'] ) ? $simple_result['data']['product_id'] : 0;
 
@@ -68,8 +75,8 @@ class RPS_Test_Runner {
             $results[] = $this->test_verify_remote_product( $simple_id, $store_url, $api, 'semplice' );
         }
 
-        // ── TEST 7: Verifica categoria e tag remoti ──
-        $results[] = $this->test_verify_remote_taxonomies( $test_cat_id, $test_tag_id, $store_url, $api, $cleanup );
+        // ── TEST 8: Verifica categoria, tag e brand remoti ──
+        $results[] = $this->test_verify_remote_taxonomies( $test_cat_id, $test_tag_id, $test_brand_id, $store_url, $api, $cleanup );
 
         // ── TEST 8: Update e re-sync ──
         if ( $simple_id ) {
@@ -105,7 +112,7 @@ class RPS_Test_Runner {
         $results[] = array(
             'name' => 'Pulizia locale',
             'status' => 'pass',
-            'message' => 'Rimossi ' . count( $cleanup['local_products'] ) . ' prodotti, ' . count( $cleanup['local_categories'] ) . ' categorie, ' . count( $cleanup['local_tags'] ) . ' tag di test',
+            'message' => 'Rimossi ' . count( $cleanup['local_products'] ) . ' prodotti, ' . count( $cleanup['local_categories'] ) . ' categorie, ' . count( $cleanup['local_tags'] ) . ' tag, ' . count( $cleanup['local_brands'] ) . ' brand di test',
         );
 
         wp_send_json_success( array( 'results' => $results ) );
@@ -157,16 +164,42 @@ class RPS_Test_Runner {
         );
     }
 
-    private function test_create_simple_product( $cat_id, $tag_id, &$cleanup ) {
+    private function test_create_brand( $api, $store_url, &$cleanup ) {
+        // Verifica che la tassonomia product_brand esista
+        if ( ! taxonomy_exists( 'product_brand' ) ) {
+            return array( 'name' => 'Crea brand test', 'status' => 'skip', 'message' => 'Tassonomia product_brand non registrata (plugin brand non attivo)' );
+        }
+        $brand_name = self::TEST_PREFIX . 'Brand ' . wp_generate_password( 4, false );
+        $brand = wp_insert_term( $brand_name, 'product_brand', array(
+            'slug'        => sanitize_title( $brand_name ),
+            'description' => 'Brand di test creato da RPS Test Runner',
+        ) );
+        if ( is_wp_error( $brand ) ) {
+            return array( 'name' => 'Crea brand test', 'status' => 'fail', 'message' => $brand->get_error_message() );
+        }
+        $cleanup['local_brands'][] = $brand['term_id'];
+        return array(
+            'name' => 'Crea brand test',
+            'status' => 'pass',
+            'message' => "'{$brand_name}' creato (ID: {$brand['term_id']})",
+            'data' => array( 'local_id' => $brand['term_id'] ),
+        );
+    }
+
+    private function test_create_simple_product( $cat_id, $tag_id, $brand_id, &$cleanup ) {
         $name = self::TEST_PREFIX . 'Prodotto Semplice ' . wp_generate_password( 4, false );
         $product = new \WC_Product_Simple();
         $product->set_name( $name );
         $product->set_status( 'private' );
         $product->set_catalog_visibility( 'hidden' );
+        $product->set_featured( true );
         $product->set_regular_price( '19.99' );
         $product->set_sale_price( '14.99' );
+        // Date sconto: da oggi a tra 30 giorni
+        $product->set_date_on_sale_from( date( 'Y-m-d', time() ) );
+        $product->set_date_on_sale_to( date( 'Y-m-d', strtotime( '+30 days' ) ) );
         $product->set_sku( 'rps-test-' . wp_generate_password( 6, false ) );
-        $product->set_description( '<p>Prodotto di test creato da <strong>RPS Test Runner</strong>.</p><p>Contiene HTML per verificare che la descrizione venga sincronizzata correttamente.</p>' );
+        $product->set_description( '<p>Prodotto di test creato da <strong>RPS Test Runner</strong>.</p><p>Contiene HTML per verificare che la descrizione venga sincronizzata correttamente.</p><ul><li>Punto 1</li><li>Punto 2</li></ul>' );
         $product->set_short_description( 'Descrizione breve di test RPS con <em>formattazione</em>.' );
         $product->set_manage_stock( true );
         $product->set_stock_quantity( 10 );
@@ -177,9 +210,9 @@ class RPS_Test_Runner {
         $product->set_height( '5' );
         $product->set_tax_status( 'taxable' );
         $product->set_tax_class( '' );
-        $product->set_sold_individually( false );
-        $product->set_backorders( 'no' );
-        $product->set_purchase_note( 'Nota di test per il cliente' );
+        $product->set_sold_individually( true );
+        $product->set_backorders( 'notify' );
+        $product->set_purchase_note( 'Nota di test per il cliente — grazie per l\'acquisto!' );
         $product->set_menu_order( 99 );
         $product->set_reviews_allowed( true );
         $product->set_virtual( false );
@@ -191,13 +224,31 @@ class RPS_Test_Runner {
             return array( 'name' => 'Crea prodotto semplice (privato)', 'status' => 'fail', 'message' => 'Impossibile creare il prodotto' );
         }
 
-        // Meta personalizzati per testare il sync dei meta_data
+        // Brand (tassonomia custom, non gestita da WC_Product)
+        if ( $brand_id ) {
+            wp_set_object_terms( $id, array( $brand_id ), 'product_brand' );
+        }
+
+        // Global Unique ID (ISBN/EAN) - WooCommerce 8.5+
+        if ( method_exists( $product, 'set_global_unique_id' ) ) {
+            $product->set_global_unique_id( '978-88-472-0000-0' );
+            $product->save();
+        }
+
+        // Meta personalizzati
         update_post_meta( $id, 'test_custom_field', 'valore personalizzato di test' );
         update_post_meta( $id, 'test_numeric_field', '42' );
+        // bookshop_link: meta specifico Raffaello che il sync gestisce
+        update_post_meta( $id, 'bookshop_link', array(
+            'title'  => 'Vedi nel bookshop',
+            'url'    => 'https://example.com/test-bookshop',
+            'target' => '_blank',
+        ) );
 
         $cleanup['local_products'][] = $id;
 
-        $fields_summary = "SKU: {$product->get_sku()}, Prezzo: 19.99/14.99, Peso: 0.5kg, Dim: 20x15x5, Stock: 10, Stato: private/hidden";
+        $fields_summary = "SKU: {$product->get_sku()}, Prezzo: 19.99/14.99 (sconto 30gg), Peso: 0.5kg, Dim: 20x15x5, Stock: 10, Featured, Sold individually, Backorders: notify";
+        if ( $brand_id ) $fields_summary .= ', Brand';
         return array(
             'name' => 'Crea prodotto semplice (privato)',
             'status' => 'pass',
@@ -345,9 +396,39 @@ class RPS_Test_Runner {
         $has_html = ( strpos( $remote->description, '<strong>' ) !== false || strpos( $remote->description, '<p>' ) !== false );
         $checks[] = $has_html ? 'descrizione HTML OK' : 'descrizione HTML FAIL';
 
-        // Sale price
+        // Featured
+        if ( isset( $remote->featured ) ) {
+            $checks[] = $remote->featured ? 'featured OK' : 'featured FAIL';
+        }
+
+        // Sale price + date
         if ( $local->get_sale_price() ) {
             $checks[] = ( (float) $remote->sale_price === (float) $local->get_sale_price() ) ? 'sale_price OK' : "sale_price FAIL ({$remote->sale_price})";
+            if ( isset( $remote->date_on_sale_from ) && $remote->date_on_sale_from ) {
+                $checks[] = 'date_on_sale_from OK';
+            } else {
+                $checks[] = 'date_on_sale_from FAIL';
+            }
+            if ( isset( $remote->date_on_sale_to ) && $remote->date_on_sale_to ) {
+                $checks[] = 'date_on_sale_to OK';
+            } else {
+                $checks[] = 'date_on_sale_to FAIL';
+            }
+        }
+
+        // Sold individually
+        if ( isset( $remote->sold_individually ) ) {
+            $checks[] = $remote->sold_individually ? 'sold_individually OK' : 'sold_individually FAIL';
+        }
+
+        // Backorders
+        if ( isset( $remote->backorders ) ) {
+            $checks[] = ( $remote->backorders === 'notify' ) ? 'backorders OK' : "backorders FAIL ({$remote->backorders})";
+        }
+
+        // Purchase note
+        if ( isset( $remote->purchase_note ) && strpos( $remote->purchase_note, 'test' ) !== false ) {
+            $checks[] = 'purchase_note OK';
         }
 
         // Categorie
@@ -364,15 +445,25 @@ class RPS_Test_Runner {
             $checks[] = 'tag WARN (0)';
         }
 
+        // Brand
+        if ( isset( $remote->brands ) && count( $remote->brands ) > 0 ) {
+            $checks[] = 'brand OK (' . count( $remote->brands ) . ')';
+        } elseif ( isset( $remote->brands ) ) {
+            $checks[] = 'brand WARN (0)';
+        }
+
         // Meta data
         $meta_ok = 0;
+        $meta_details = array();
         if ( isset( $remote->meta_data ) ) {
             foreach ( $remote->meta_data as $meta ) {
-                if ( $meta->key === 'test_custom_field' && $meta->value === 'valore personalizzato di test' ) $meta_ok++;
-                if ( $meta->key === 'test_numeric_field' && $meta->value === '42' ) $meta_ok++;
+                if ( $meta->key === 'test_custom_field' && $meta->value === 'valore personalizzato di test' ) { $meta_ok++; $meta_details[] = 'custom_field'; }
+                if ( $meta->key === 'test_numeric_field' && $meta->value === '42' ) { $meta_ok++; $meta_details[] = 'numeric_field'; }
+                if ( $meta->key === 'bookshop_link' ) { $meta_ok++; $meta_details[] = 'bookshop_link'; }
+                if ( $meta->key === 'bookshop_product_id' ) { $meta_ok++; $meta_details[] = 'bookshop_product_id'; }
             }
         }
-        $checks[] = ( $meta_ok >= 2 ) ? 'meta personalizzati OK' : "meta personalizzati FAIL ({$meta_ok}/2)";
+        $checks[] = ( $meta_ok >= 3 ) ? "meta OK ({$meta_ok}: " . implode( ', ', $meta_details ) . ')' : "meta FAIL ({$meta_ok}/4: " . implode( ', ', $meta_details ) . ')';
 
         $has_fail = false;
         foreach ( $checks as $c ) {
@@ -386,7 +477,7 @@ class RPS_Test_Runner {
         );
     }
 
-    private function test_verify_remote_taxonomies( $cat_id, $tag_id, $store_url, $api, &$cleanup ) {
+    private function test_verify_remote_taxonomies( $cat_id, $tag_id, $brand_id, $store_url, $api, &$cleanup ) {
         $checks = array();
 
         // Categoria
@@ -395,13 +486,13 @@ class RPS_Test_Runner {
             if ( is_array( $cat_mpsrel ) && isset( $cat_mpsrel[ $store_url ] ) ) {
                 $remote_cat = $api->getCategory( $cat_mpsrel[ $store_url ] );
                 if ( isset( $remote_cat->id ) ) {
-                    $checks[] = "categoria remota OK (ID: {$remote_cat->id}, nome: {$remote_cat->name})";
+                    $checks[] = "categoria OK (ID: {$remote_cat->id}, {$remote_cat->name})";
                     $cleanup['remote_categories'][] = $remote_cat->id;
                 } else {
-                    $checks[] = 'categoria remota FAIL (non trovata)';
+                    $checks[] = 'categoria FAIL (non trovata)';
                 }
             } else {
-                $checks[] = 'categoria mpsrel FAIL (non mappata)';
+                $checks[] = 'categoria FAIL (non mappata)';
             }
         }
 
@@ -411,13 +502,29 @@ class RPS_Test_Runner {
             if ( is_array( $tag_mpsrel ) && isset( $tag_mpsrel[ $store_url ] ) ) {
                 $remote_tag = $api->getTag( $tag_mpsrel[ $store_url ] );
                 if ( isset( $remote_tag->id ) ) {
-                    $checks[] = "tag remoto OK (ID: {$remote_tag->id}, nome: {$remote_tag->name})";
+                    $checks[] = "tag OK (ID: {$remote_tag->id}, {$remote_tag->name})";
                     $cleanup['remote_tags'][] = $remote_tag->id;
                 } else {
-                    $checks[] = 'tag remoto FAIL (non trovato)';
+                    $checks[] = 'tag FAIL (non trovato)';
                 }
             } else {
-                $checks[] = 'tag mpsrel FAIL (non mappato)';
+                $checks[] = 'tag FAIL (non mappato)';
+            }
+        }
+
+        // Brand
+        if ( $brand_id ) {
+            $brand_mpsrel = get_term_meta( $brand_id, 'mpsrel', true );
+            if ( is_array( $brand_mpsrel ) && isset( $brand_mpsrel[ $store_url ] ) ) {
+                $remote_brand = $api->getBrand( $brand_mpsrel[ $store_url ] );
+                if ( isset( $remote_brand->id ) ) {
+                    $checks[] = "brand OK (ID: {$remote_brand->id}, {$remote_brand->name})";
+                    $cleanup['remote_brands'][] = $remote_brand->id;
+                } else {
+                    $checks[] = 'brand FAIL (non trovato)';
+                }
+            } else {
+                $checks[] = 'brand FAIL (non mappato)';
             }
         }
 
@@ -531,16 +638,19 @@ class RPS_Test_Runner {
     private function test_delete_remote_taxonomies( $cleanup, $api ) {
         $checks = array();
 
-        // Categorie remote - WooCommerce API: DELETE /products/categories/{id}?force=true
         foreach ( $cleanup['remote_categories'] as $remote_cat_id ) {
             $result = $api->deleteCategory( $remote_cat_id );
-            $checks[] = isset( $result->id ) ? "categoria {$remote_cat_id} eliminata" : "categoria {$remote_cat_id} FAIL";
+            $checks[] = isset( $result->id ) ? "cat {$remote_cat_id} OK" : "cat {$remote_cat_id} FAIL";
         }
 
-        // Tag remoti
         foreach ( $cleanup['remote_tags'] as $remote_tag_id ) {
             $result = $api->deleteTag( $remote_tag_id );
-            $checks[] = isset( $result->id ) ? "tag {$remote_tag_id} eliminato" : "tag {$remote_tag_id} FAIL";
+            $checks[] = isset( $result->id ) ? "tag {$remote_tag_id} OK" : "tag {$remote_tag_id} FAIL";
+        }
+
+        foreach ( $cleanup['remote_brands'] as $remote_brand_id ) {
+            $result = $api->deleteBrand( $remote_brand_id );
+            $checks[] = isset( $result->id ) ? "brand {$remote_brand_id} OK" : "brand {$remote_brand_id} FAIL";
         }
 
         if ( empty( $checks ) ) {
@@ -587,6 +697,10 @@ class RPS_Test_Runner {
         foreach ( $cleanup['local_tags'] as $tid ) {
             delete_term_meta( $tid, 'mpsrel' );
             wp_delete_term( $tid, 'product_tag' );
+        }
+        foreach ( $cleanup['local_brands'] as $tid ) {
+            delete_term_meta( $tid, 'mpsrel' );
+            wp_delete_term( $tid, 'product_brand' );
         }
 
         // Attributo test
@@ -639,6 +753,18 @@ class RPS_Test_Runner {
                 delete_term_meta( $tag->term_id, 'mpsrel' );
                 wp_delete_term( $tag->term_id, 'product_tag' );
                 $cleaned++;
+            }
+        }
+
+        // Brand test
+        if ( taxonomy_exists( 'product_brand' ) ) {
+            $brands = get_terms( array( 'taxonomy' => 'product_brand', 'hide_empty' => false, 'search' => self::TEST_PREFIX ) );
+            if ( is_array( $brands ) ) {
+                foreach ( $brands as $brand ) {
+                    delete_term_meta( $brand->term_id, 'mpsrel' );
+                    wp_delete_term( $brand->term_id, 'product_brand' );
+                    $cleaned++;
+                }
             }
         }
 
