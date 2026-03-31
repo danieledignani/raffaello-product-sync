@@ -85,7 +85,14 @@ class RPS_Logger {
             $data['response_data'] = $safe;
         }
 
-        $wpdb->insert( $this->table_name, $data );
+        $result = $wpdb->insert( $this->table_name, $data );
+
+        // Se l'insert fallisce (tabella non esiste), creala e riprova
+        if ( $result === false && strpos( $wpdb->last_error, 'doesn\'t exist' ) !== false ) {
+            self::create_table();
+            update_option( 'rps_db_version', RPS_VERSION );
+            $wpdb->insert( $this->table_name, $data );
+        }
 
         // Prune: mantieni solo le ultime MAX_ENTRIES righe
         self::prune_old_entries();
@@ -148,6 +155,13 @@ class RPS_Logger {
 
     public function get_logs( $args = array() ) {
         global $wpdb;
+
+        // Verifica che la tabella esista
+        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $this->table_name ) ) !== $this->table_name ) {
+            self::create_table();
+            update_option( 'rps_db_version', RPS_VERSION );
+            return array( 'items' => array(), 'total' => 0, 'pages' => 0, 'page' => 1, 'per_page' => 50 );
+        }
 
         $defaults = array(
             'level'      => '',
