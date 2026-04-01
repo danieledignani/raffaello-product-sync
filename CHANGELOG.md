@@ -2,6 +2,11 @@
 
 Tutte le modifiche rilevanti al plugin sono documentate in questo file.
 
+## [4.5.5] - 2026-04-01
+
+### Modifiche
+- Fix conteggio prodotti 'Sync tutti i filtrati': aggiunto post_status publish alla query pagina
+
 ## [4.5.4] - 2026-03-31
 
 ### Modifiche
