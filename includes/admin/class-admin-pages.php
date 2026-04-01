@@ -300,7 +300,7 @@ class RPS_Admin_Pages {
                     <tbody>
                     <?php
                     $paged = isset( $_REQUEST['paged'] ) ? (int) $_REQUEST['paged'] : 1;
-                    $args = array( 'posts_per_page' => $record_per_page, 'paged' => $paged, 'post_type' => 'product' );
+                    $args = array( 'posts_per_page' => $record_per_page, 'paged' => $paged, 'post_type' => 'product', 'post_status' => 'publish' );
                     if ( $s ) $args['s'] = $s;
                     if ( $product_cat ) $args['tax_query'][] = array( 'taxonomy' => 'product_cat', 'field' => 'term_id', 'terms' => $product_cat );
                     if ( $product_brand ) $args['tax_query'][] = array( 'taxonomy' => 'product_brand', 'field' => 'term_id', 'terms' => $product_brand );
